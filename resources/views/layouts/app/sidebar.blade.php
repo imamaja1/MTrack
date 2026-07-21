@@ -7,6 +7,7 @@
         {{-- Toast Notifications --}}
         <x-toast />
 
+
         {{-- NAVBAR / TOP HEADER (Mobile & Desktop Quick Actions) --}}
         <div class="navbar lg:hidden bg-base-100 border-b border-base-300 px-4 flex items-center justify-between sticky top-0 z-10">
             <div class="flex items-center gap-2">
@@ -93,18 +94,38 @@
 
             {{-- MAIN CONTENT AREA --}}
             <x-slot:content class="p-6 md:p-8">
-                <!-- Global Loading Overlay for wire:navigate -->
-                <div id="page-loading-overlay" style="display: none;" class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-base-100/70 backdrop-blur-sm transition-all duration-200">
-                    <div class="flex flex-col items-center gap-3">
-                        <span class="loading loading-spinner loading-lg text-primary"></span>
-                        <span class="text-sm font-medium text-base-content animate-pulse">Memuat Halaman...</span>
-                    </div>
-                </div>
-
                 {{ $slot }}
             </x-slot:content>
         </x-main>
 
         @livewireScripts
+
+        <!-- Global Loading Overlay for wire:navigate -->
+        <div id="page-loading-overlay" style="display:none; position:fixed; inset:0; z-index:99999; flex-direction:column; align-items:center; justify-content:center; background:oklch(var(--b1)/0.8); backdrop-filter:blur(4px);">
+            <div style="display:flex; flex-direction:column; align-items:center; gap:12px;">
+                <span class="loading loading-spinner loading-lg text-primary"></span>
+                <span style="font-size:0.875rem; font-weight:500;" class="text-base-content animate-pulse">Memuat Halaman...</span>
+            </div>
+        </div>
+        <script>
+            // Show loading overlay when Livewire starts navigating
+            document.addEventListener('livewire:navigating', function () {
+                var el = document.getElementById('page-loading-overlay');
+                if (el) el.style.display = 'flex';
+                
+                // Fallback: hide after 8 seconds in case of error
+                clearTimeout(window._overlayTimeout);
+                window._overlayTimeout = setTimeout(function () {
+                    if (el) el.style.display = 'none';
+                }, 8000);
+            });
+
+            // Hide overlay once new page is ready
+            document.addEventListener('livewire:navigated', function () {
+                var el = document.getElementById('page-loading-overlay');
+                if (el) el.style.display = 'none';
+                clearTimeout(window._overlayTimeout);
+            });
+        </script>
     </body>
 </html>
