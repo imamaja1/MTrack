@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="light">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
         @include('partials.head')
     </head>
@@ -18,8 +18,14 @@
                     {{ config('app.name', 'MTrack') }}
                 </div>
             </div>
-            
-            <x-dropdown right>
+
+            <div class="flex items-center gap-1">
+                <button onclick="toggleTheme()" data-theme-toggle class="btn btn-ghost btn-square" aria-label="Toggle theme">
+                    <x-icon name="o-sun" data-icon="sun" class="w-5 h-5" />
+                    <x-icon name="o-moon" data-icon="moon" class="w-5 h-5" style="display:none" />
+                </button>
+
+                <x-dropdown right>
                 <x-slot:trigger>
                     <div class="flex aspect-square size-8 items-center justify-center rounded-full bg-primary text-primary-content font-bold shrink-0 cursor-pointer">
                         {{ auth()->user()->initials() }}
@@ -27,12 +33,10 @@
                 </x-slot:trigger>
                 <x-menu-item title="{{ auth()->user()->name }}" subtitle="{{ auth()->user()->email }}" class="font-bold border-b border-base-200 pointer-events-none" />
                 <x-menu-item title="Settings" icon="o-cog-6-tooth" link="{{ route('profile.edit') }}" wire:navigate />
-                <form method="POST" action="{{ route('logout') }}" class="w-full">
-                    @csrf
-                    <x-menu-item title="Log out" icon="o-arrow-right-on-rectangle" type="submit" class="text-error" />
-                </form>
+                <livewire:actions.logout />
             </x-dropdown>
         </div>
+    </div>
 
         {{-- Main Layout Shell --}}
         <x-main full-width>
@@ -85,7 +89,12 @@
                     @endif
                 </x-menu>
 
-                <div class="mt-auto p-3 border-t border-base-300">
+                <div class="mt-auto p-3 border-t border-base-300 space-y-2">
+                    <button onclick="toggleTheme()" data-theme-toggle class="btn btn-ghost btn-sm w-full justify-start" aria-label="Toggle theme">
+                        <x-icon name="o-sun" data-icon="sun" class="w-4 h-4" />
+                        <x-icon name="o-moon" data-icon="moon" class="w-4 h-4" style="display:none" />
+                        <span class="hidden-when-collapsed text-sm">Tema</span>
+                    </button>
                     <x-desktop-user-menu />
                 </div>
             </x-slot:sidebar>
@@ -100,32 +109,12 @@
 
         @livewireScripts
 
-        <!-- Global Loading Overlay for wire:navigate -->
-        <div id="page-loading-overlay" style="display:none; position:fixed; inset:0; z-index:99999; flex-direction:column; align-items:center; justify-content:center; background:oklch(var(--b1)/0.8); backdrop-filter:blur(4px);">
-            <div style="display:flex; flex-direction:column; align-items:center; gap:12px;">
-                <span class="loading loading-spinner loading-lg text-primary"></span>
-                <span style="font-size:0.875rem; font-weight:500;" class="text-base-content animate-pulse">Memuat Halaman...</span>
-            </div>
+    <!-- Global Loading Overlay -->
+    <div id="page-loading-overlay" style="display:none; position:fixed; inset:0; z-index:99999; flex-direction:column; align-items:center; justify-content:center; background:oklch(var(--b1)/0.8); backdrop-filter:blur(4px);">
+        <div style="display:flex; flex-direction:column; align-items:center; gap:12px;">
+            <span class="loading loading-spinner loading-lg text-primary"></span>
+            <span style="font-size:0.875rem; font-weight:500;" class="text-base-content animate-pulse">Memuat Halaman...</span>
         </div>
-        <script>
-            // Show loading overlay when Livewire starts navigating
-            document.addEventListener('livewire:navigating', function () {
-                var el = document.getElementById('page-loading-overlay');
-                if (el) el.style.display = 'flex';
-                
-                // Fallback: hide after 8 seconds in case of error
-                clearTimeout(window._overlayTimeout);
-                window._overlayTimeout = setTimeout(function () {
-                    if (el) el.style.display = 'none';
-                }, 8000);
-            });
-
-            // Hide overlay once new page is ready
-            document.addEventListener('livewire:navigated', function () {
-                var el = document.getElementById('page-loading-overlay');
-                if (el) el.style.display = 'none';
-                clearTimeout(window._overlayTimeout);
-            });
-        </script>
-    </body>
+    </div>
+</body>
 </html>

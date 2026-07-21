@@ -16,10 +16,7 @@
                 <x-button label="{{ __('Resend verification email') }}" type="submit" class="btn-primary w-full" />
             </form>
 
-            <form method="POST" action="{{ route('logout') }}" class="w-full">
-                @csrf
-                <x-button label="{{ __('Log out') }}" type="submit" class="btn-ghost btn-sm w-full text-error" data-test="logout-button" />
-            </form>
+            <livewire:actions.logout variant="button" />
         </div>
     </div>
 </x-layouts::auth>

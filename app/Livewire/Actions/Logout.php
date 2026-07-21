@@ -2,23 +2,34 @@
 
 namespace App\Livewire\Actions;
 
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
-use Livewire\Features\SupportRedirects\Redirector;
+use Livewire\Component;
 
-class Logout
+class Logout extends Component
 {
-    /**
-     * Log the current user out of the application.
-     */
-    public function __invoke(): Redirector|RedirectResponse
+    public string $variant = 'menu';
+
+    public function __invoke(): void
+    {
+        Auth::guard('web')->logout();
+
+        Session::invalidate();
+        Session::regenerateToken();
+    }
+
+    public function logout(): void
     {
         Auth::guard('web')->logout();
 
         Session::invalidate();
         Session::regenerateToken();
 
-        return redirect('/');
+        $this->redirect('/', navigate: true);
+    }
+
+    public function render()
+    {
+        return view('livewire.actions.logout');
     }
 }

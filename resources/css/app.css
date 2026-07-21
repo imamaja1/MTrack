@@ -5,11 +5,18 @@
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../vendor/robsontenorio/mary/src/View/Components/**/*.php';
 
-@custom-variant dark (&:where(.dark, .dark *));
+@custom-variant dark (&:where(.dark, [data-theme="dark"], .dark *, [data-theme="dark"] *));
 
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+html[data-navigating] .drawer-overlay {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+}
+
 
 @media print {
     body * {
@@ -22,7 +29,7 @@
         position: absolute;
         left: 0;
         top: 0;
-        width: 58mm; /* Standard thermal printer width */
+        width: 58mm;
         font-family: 'Courier New', Courier, monospace;
         font-size: 12px;
         color: #000;

@@ -111,7 +111,7 @@ new class extends Component
             </x-card>
             
             <x-card class="bg-neutral text-neutral-content shadow-sm border-none relative overflow-hidden">
-                <div class="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-purple-500/20"></div>
+                <div class="absolute inset-0 bg-gradient-to-br from-primary/30 to-orange-500/15"></div>
                 <div class="relative z-10 flex flex-col gap-1">
                     <div class="text-sm font-medium text-neutral-content/80">Laba Bersih</div>
                     <div class="text-3xl font-bold text-white">Rp {{ number_format($data['netProfit'], 0, ',', '.') }}</div>

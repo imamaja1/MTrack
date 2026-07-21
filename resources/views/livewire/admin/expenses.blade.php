@@ -233,7 +233,7 @@ new class extends Component
             <x-input wire:model="expense_date" type="date" label="Tanggal Pengeluaran" required />
 
             @if($this->categories->isEmpty())
-                <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-700/40 dark:bg-amber-500/10 dark:text-amber-400">
+                <div class="alert alert-warning rounded-lg text-sm">
                     Belum ada kategori. Silakan buat kategori terlebih dahulu melalui tombol <strong>Kelola Kategori</strong>.
                 </div>
             @else

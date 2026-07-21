@@ -380,7 +380,7 @@ new class extends Component
 
 <div class="flex flex-col h-full gap-4">
     @if($this->existingTransaction)
-        <div class="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400 p-4 rounded-xl flex items-center justify-between">
+        <div class="alert alert-info p-4 rounded-xl flex items-center justify-between">
             <div>
                 <strong class="font-bold">Mode Buka Tagihan:</strong> Anda sedang menambahkan pesanan baru ke <strong>{{ $this->existingTransaction->invoice_number }}</strong>.
             </div>
@@ -396,7 +396,7 @@ new class extends Component
                 <x-input wire:model.live.debounce.300ms="search" placeholder="Cari nama produk atau SKU..." icon="o-magnifying-glass" />
             </div>
             @error('cart')
-                <div class="mb-4 p-3 bg-red-100 text-red-700 rounded">{{ $message }}</div>
+                <div class="mb-4 p-3 bg-error/10 text-error rounded border border-error/20">{{ $message }}</div>
             @enderror
             
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -559,7 +559,7 @@ new class extends Component
     <div class="bg-base-200/50 p-3 rounded-lg border border-base-200 mt-4">
         <div class="flex justify-between items-center font-bold">
             <span>Total Akhir</span>
-            <span class="text-orange-600 dark:text-orange-500">Rp {{ number_format($this->total, 0, ',', '.') }}</span>
+            <span class="text-primary">Rp {{ number_format($this->total, 0, ',', '.') }}</span>
         </div>
         @if($this->cashbackInfo > 0)
             <div class="text-xs text-info mt-1 flex items-center gap-1">

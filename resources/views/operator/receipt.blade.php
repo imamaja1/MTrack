@@ -79,7 +79,7 @@
         @if($receipt['total_amount'] > $receipt['paid_amount'])
         <tr>
             <td class="bold">SISA TAGIHAN</td>
-            <td class="text-right bold text-red-600">Rp{{ number_format(max(0, $receipt['total_amount'] - $receipt['paid_amount']), 0, ',', '.') }}</td>
+            <td class="text-right bold text-error">Rp{{ number_format(max(0, $receipt['total_amount'] - $receipt['paid_amount']), 0, ',', '.') }}</td>
         </tr>
         @endif
         @if($receipt['paid_amount'] > 0)

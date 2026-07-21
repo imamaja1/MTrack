@@ -15,8 +15,5 @@
     <x-menu-item title="{{ auth()->user()->name }}" subtitle="{{ auth()->user()->email }}" class="font-bold border-b border-base-200 pointer-events-none" />
     <x-menu-item title="Settings" icon="o-cog-6-tooth" link="{{ route('profile.edit') }}" wire:navigate />
 
-    <form method="POST" action="{{ route('logout') }}" class="w-full">
-        @csrf
-        <x-menu-item title="Log out" icon="o-arrow-right-on-rectangle" type="submit" class="text-error" />
-    </form>
+    <livewire:actions.logout />
 </x-dropdown>
