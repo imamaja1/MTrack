@@ -4,10 +4,10 @@ use Livewire\Component;
 use App\Models\MemberBenefit;
 use Illuminate\Support\Facades\Auth;
 use Livewire\WithPagination;
-use Flux\Flux;
+use Mary\Traits\Toast;
 
 new class extends Component {
-    use WithPagination;
+    use WithPagination, Toast;
 
     public $showModal = false;
     public $showDeleteModal = false;
@@ -56,7 +56,7 @@ new class extends Component {
                 'cashback_nominal' => $this->cashback_nominal,
                 'is_active' => $this->is_active,
             ]);
-            Flux::toast('Aturan berhasil diperbarui.', variant: 'success');
+            $this->success('Aturan berhasil diperbarui.');
         } else {
             MemberBenefit::create([
                 'admin_id' => Auth::id(),
@@ -65,7 +65,7 @@ new class extends Component {
                 'cashback_nominal' => $this->cashback_nominal,
                 'is_active' => $this->is_active,
             ]);
-            Flux::toast('Aturan berhasil ditambahkan.', variant: 'success');
+            $this->success('Aturan berhasil ditambahkan.');
         }
 
         $this->showModal = false;
@@ -75,7 +75,7 @@ new class extends Component {
     {
         $benefit = MemberBenefit::where('admin_id', Auth::id())->findOrFail($id);
         $benefit->update(['is_active' => !$benefit->is_active]);
-        Flux::toast('Status aturan diubah.', variant: 'success');
+        $this->success('Status aturan diubah.');
     }
 
     public function confirmDelete($id)
@@ -89,7 +89,7 @@ new class extends Component {
         if ($this->deletingId) {
             $benefit = MemberBenefit::where('admin_id', Auth::id())->findOrFail($this->deletingId);
             $benefit->delete();
-            Flux::toast('Aturan berhasil dihapus.', variant: 'success');
+            $this->success('Aturan berhasil dihapus.');
         }
         $this->showDeleteModal = false;
         $this->deletingId = null;
@@ -112,107 +112,91 @@ new class extends Component {
     <div class="flex flex-col gap-6">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-                <h1 class="text-2xl font-bold text-zinc-900 dark:text-white">Config Member</h1>
-                <p class="text-zinc-500 dark:text-zinc-400">Kelola tingkat (tier) keuntungan member berdasarkan minimal belanja.</p>
+                <h1 class="text-2xl font-bold text-base-content">Config Member</h1>
+                <p class="text-sm text-base-content/70">Kelola tingkat (tier) keuntungan member berdasarkan minimal belanja.</p>
             </div>
-            <flux:button wire:click="openModal" variant="primary" icon="plus">Tambah Aturan</flux:button>
+            <x-button wire:click="openModal" label="Tambah Aturan" icon="o-plus" class="btn-primary" />
         </div>
 
-        <flux:card class="p-0">
+        <x-card class="p-0 bg-base-100 shadow-sm border border-base-200 overflow-hidden">
             <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm text-zinc-500 dark:text-zinc-400">
-                    <thead class="bg-zinc-50 text-xs uppercase text-zinc-700 dark:bg-zinc-800/50 dark:text-zinc-300">
+                <table class="table w-full">
+                    <thead>
                         <tr>
-                            <th class="px-6 py-3">Min. Belanja</th>
-                            <th class="px-6 py-3">Potongan Harga</th>
-                            <th class="px-6 py-3">Cashback Poin</th>
-                            <th class="px-6 py-3">Status</th>
-                            <th class="px-6 py-3">Aksi</th>
+                            <th>Min. Belanja</th>
+                            <th>Potongan Harga</th>
+                            <th>Cashback Poin</th>
+                            <th>Status</th>
+                            <th>Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($benefits as $benefit)
-                        <tr class="border-b border-zinc-200 dark:border-zinc-700">
-                            <td class="px-6 py-4 font-bold text-zinc-900 dark:text-white">
+                        <tr>
+                            <td class="font-bold text-base-content">
                                 Rp {{ number_format($benefit->min_purchase, 0, ',', '.') }}
                             </td>
-                            <td class="px-6 py-4 text-green-600 dark:text-green-400">
+                            <td class="text-success font-medium">
                                 Rp {{ number_format($benefit->discount_nominal, 0, ',', '.') }}
                             </td>
-                            <td class="px-6 py-4 text-blue-600 dark:text-blue-400">
+                            <td class="text-info font-medium">
                                 +{{ number_format($benefit->cashback_nominal, 0, ',', '.') }}
                             </td>
-                            <td class="px-6 py-4">
+                            <td>
                                 @if($benefit->is_active)
-                                    <flux:badge color="green" size="sm">Aktif</flux:badge>
+                                    <x-badge value="Aktif" class="badge-success badge-sm" />
                                 @else
-                                    <flux:badge color="zinc" size="sm">Nonaktif</flux:badge>
+                                    <x-badge value="Nonaktif" class="badge-neutral badge-sm" />
                                 @endif
                             </td>
-                            <td class="px-6 py-4">
+                            <td>
                                 <div class="flex items-center gap-2">
-                                    <flux:button wire:click="toggleStatus({{ $benefit->id }})" size="sm" variant="{{ $benefit->is_active ? 'danger' : 'primary' }}">
-                                        {{ $benefit->is_active ? 'Matikan' : 'Nyalakan' }}
-                                    </flux:button>
-                                    <flux:button wire:click="openModal({{ $benefit->id }})" size="sm" variant="outline" icon="pencil-square" class="px-2" />
-                                    <flux:button wire:click="confirmDelete({{ $benefit->id }})" size="sm" variant="danger" icon="trash" class="px-2" />
+                                    <x-button wire:click="toggleStatus({{ $benefit->id }})" label="{{ $benefit->is_active ? 'Matikan' : 'Nyalakan' }}" class="btn-sm {{ $benefit->is_active ? 'btn-error btn-outline' : 'btn-primary' }}" />
+                                    <x-button wire:click="openModal({{ $benefit->id }})" icon="o-pencil-square" class="btn-ghost btn-sm" />
+                                    <x-button wire:click="confirmDelete({{ $benefit->id }})" icon="o-trash" class="btn-error btn-sm text-white" />
                                 </div>
                             </td>
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="5" class="px-6 py-4 text-center text-zinc-500">Belum ada aturan keuntungan member.</td>
+                            <td colspan="5" class="py-4 text-center text-base-content/60">Belum ada aturan keuntungan member.</td>
                         </tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
             @if($benefits->hasPages())
-                <div class="p-4 border-t border-zinc-200 dark:border-zinc-700">
+                <div class="p-4 border-t border-base-200">
                     {{ $benefits->links() }}
                 </div>
             @endif
-        </flux:card>
+        </x-card>
     </div>
 
-    <flux:modal wire:model="showModal" class="md:w-96">
-        <div class="space-y-6">
-            <div>
-                <flux:heading size="lg">{{ $editingId ? 'Edit Aturan' : 'Tambah Aturan' }}</flux:heading>
-                <flux:subheading>Tentukan keuntungan yang didapat member saat mencapai minimal belanja tertentu.</flux:subheading>
-            </div>
+    <!-- Add/Edit Rule Modal -->
+    <x-modal wire:model="showModal" title="{{ $editingId ? 'Edit Aturan' : 'Tambah Aturan' }}">
+        <p class="text-sm text-base-content/70 mb-4">Tentukan keuntungan yang didapat member saat mencapai minimal belanja tertentu.</p>
+        <x-form wire:submit="save">
+            <x-input wire:model="min_purchase" type="number" min="0" label="Minimal Belanja (Rp)" placeholder="0" />
+            <x-input wire:model="discount_nominal" type="number" min="0" label="Potongan Harga (Rp)" placeholder="0" />
+            <x-input wire:model="cashback_nominal" type="number" min="0" label="Cashback Poin" placeholder="0" />
+            
+            <x-checkbox wire:model="is_active" label="Aktifkan aturan ini sekarang" />
 
-            <form wire:submit="save" class="space-y-4">
-                <flux:input wire:model="min_purchase" type="number" min="0" label="Minimal Belanja (Rp)" placeholder="0" />
-                <flux:input wire:model="discount_nominal" type="number" min="0" label="Potongan Harga (Rp)" placeholder="0" />
-                <flux:input wire:model="cashback_nominal" type="number" min="0" label="Cashback Poin" placeholder="0" />
-                
-                <flux:checkbox wire:model="is_active" label="Aktifkan aturan ini sekarang" />
-
-                <div class="flex justify-end gap-2 pt-4">
-                    <flux:modal.close>
-                        <flux:button variant="ghost">Batal</flux:button>
-                    </flux:modal.close>
-                    <flux:button type="submit" variant="primary">Simpan</flux:button>
-                </div>
-            </form>
-        </div>
-    </flux:modal>
+            <x-slot:actions>
+                <x-button label="Batal" wire:click="$set('showModal', false)" class="btn-ghost" />
+                <x-button label="Simpan" type="submit" class="btn-primary" spinner="save" />
+            </x-slot:actions>
+        </x-form>
+    </x-modal>
 
     <!-- Delete Confirmation Modal -->
-    <flux:modal wire:model="showDeleteModal" class="md:w-96">
-        <div class="space-y-6">
-            <div>
-                <flux:heading size="lg">Hapus Aturan?</flux:heading>
-                <flux:subheading>Apakah Anda yakin ingin menghapus aturan ini? Tindakan ini tidak dapat dibatalkan.</flux:subheading>
-            </div>
+    <x-modal wire:model="showDeleteModal" title="Hapus Aturan?">
+        <p class="py-2 text-base-content/70">Apakah Anda yakin ingin menghapus aturan ini? Tindakan ini tidak dapat dibatalkan.</p>
 
-            <div class="flex justify-end gap-2 pt-4">
-                <flux:modal.close>
-                    <flux:button variant="ghost">Batal</flux:button>
-                </flux:modal.close>
-                <flux:button wire:click="executeDelete" variant="danger">Hapus</flux:button>
-            </div>
-        </div>
-    </flux:modal>
+        <x-slot:actions>
+            <x-button label="Batal" wire:click="$set('showDeleteModal', false)" class="btn-ghost" />
+            <x-button label="Hapus" wire:click="executeDelete" class="btn-error text-white" spinner="executeDelete" />
+        </x-slot:actions>
+    </x-modal>
 </div>

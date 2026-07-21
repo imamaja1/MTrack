@@ -5,16 +5,17 @@ use Livewire\WithPagination;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
-use Flux\Flux;
+use Mary\Traits\Toast;
 
 new class extends Component
 {
-    use WithPagination;
+    use WithPagination, Toast;
 
     public $name = '';
     public $email = '';
     public $password = '';
-    public $showDeleteModal = false;
+    public bool $showCreateModal = false;
+    public bool $showDeleteModal = false;
     public $deletingId = null;
 
     public function getOperatorsProperty()
@@ -43,8 +44,8 @@ new class extends Component
         ]);
 
         $this->reset(['name', 'email', 'password']);
-        $this->dispatch('modal-close', name: 'create-operator-modal');
-        Flux::toast('Operator berhasil ditambahkan.', variant: 'success');
+        $this->showCreateModal = false;
+        $this->success('Operator berhasil ditambahkan.');
     }
 
     public function toggleStatus($id)
@@ -52,7 +53,7 @@ new class extends Component
         $operator = User::where('admin_id', auth()->id())->find($id);
         if ($operator) {
             $operator->update(['is_active' => !$operator->is_active]);
-            Flux::toast('Status operator diubah.', variant: 'success');
+            $this->success('Status operator diubah.');
         }
     }
 
@@ -68,7 +69,7 @@ new class extends Component
             $operator = User::where('admin_id', auth()->id())->find($this->deletingId);
             if ($operator) {
                 $operator->delete();
-                Flux::toast('Operator berhasil dihapus.', variant: 'success');
+                $this->success('Operator berhasil dihapus.');
             }
         }
         $this->showDeleteModal = false;
@@ -79,93 +80,80 @@ new class extends Component
 
 <div>
     <div class="flex flex-col gap-6">
-        <div class="flex flex-col items-start gap-4">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-                <h1 class="text-2xl font-bold text-zinc-900 dark:text-white">Operator Management</h1>
-                <p class="text-zinc-500 dark:text-zinc-400">Kelola akun operator kasir untuk toko Anda.</p>
+                <h1 class="text-2xl font-bold text-base-content">Operator Management</h1>
+                <p class="text-sm text-base-content/70">Kelola akun operator kasir untuk toko Anda.</p>
             </div>
-            <flux:modal.trigger name="create-operator-modal">
-                <flux:button variant="primary" icon="plus">Tambah Operator</flux:button>
-            </flux:modal.trigger>
+            <x-button label="Tambah Operator" icon="o-plus" wire:click="$set('showCreateModal', true)" class="btn-primary" />
         </div>
 
-        <flux:card>
+        <x-card class="p-0 bg-base-100 shadow-sm border border-base-200 overflow-hidden">
             <div class="overflow-x-auto">
-            <flux:table>
-                <flux:table.columns>
-                    <flux:table.column>Name</flux:table.column>
-                    <flux:table.column>Email</flux:table.column>
-                    <flux:table.column>Status</flux:table.column>
-                    <flux:table.column>Created At</flux:table.column>
-                    <flux:table.column>Actions</flux:table.column>
-                </flux:table.columns>
-
-                <flux:table.rows>
-                    @foreach ($this->operators as $operator)
-                        <flux:table.row>
-                            <flux:table.cell>{{ $operator->name }}</flux:table.cell>
-                            <flux:table.cell>{{ $operator->email }}</flux:table.cell>
-                            <flux:table.cell>
-                                <flux:badge color="{{ $operator->is_active ? 'green' : 'zinc' }}">
-                                    {{ $operator->is_active ? 'Active' : 'Inactive' }}
-                                </flux:badge>
-                            </flux:table.cell>
-                            <flux:table.cell>{{ $operator->created_at->format('Y-m-d') }}</flux:table.cell>
-                            <flux:table.cell>
-                                <div class="flex gap-2">
-                                    <flux:button wire:click="toggleStatus({{ $operator->id }})" size="sm" variant="ghost">
-                                        {{ $operator->is_active ? 'Deactivate' : 'Activate' }}
-                                    </flux:button>
-                                    <flux:button wire:click="confirmDelete({{ $operator->id }})" size="sm" variant="danger" icon="trash" class="px-2" />
-                                </div>
-                            </flux:table.cell>
-                        </flux:table.row>
-                    @endforeach
-                </flux:table.rows>
-            </flux:table>
-        </div>
-        <div class="mt-4">
-            {{ $this->operators->links() }}
-        </div>
-    </flux:card>
+                <table class="table w-full">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Status</th>
+                            <th>Created At</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($this->operators as $operator)
+                            <tr>
+                                <td class="font-medium text-base-content">{{ $operator->name }}</td>
+                                <td>{{ $operator->email }}</td>
+                                <td>
+                                    <x-badge value="{{ $operator->is_active ? 'Active' : 'Inactive' }}" class="{{ $operator->is_active ? 'badge-success' : 'badge-neutral' }}" />
+                                </td>
+                                <td>{{ $operator->created_at->format('Y-m-d') }}</td>
+                                <td>
+                                    <div class="flex items-center gap-2">
+                                        <x-button wire:click="toggleStatus({{ $operator->id }})" label="{{ $operator->is_active ? 'Deactivate' : 'Activate' }}" class="btn-ghost btn-sm" />
+                                        <x-button wire:click="confirmDelete({{ $operator->id }})" icon="o-trash" class="btn-error btn-sm text-white" />
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5" class="py-4 text-center text-base-content/60">Belum ada operator terdaftar.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+            @if($this->operators->hasPages())
+                <div class="p-4 border-t border-base-200">
+                    {{ $this->operators->links() }}
+                </div>
+            @endif
+        </x-card>
     </div>
 
-    <flux:modal name="create-operator-modal" class="md:w-96">
-        <div class="space-y-6">
-            <div>
-                <flux:heading size="lg">Tambah Operator</flux:heading>
-                <flux:subheading>Buat akun kasir baru untuk mengelola transaksi.</flux:subheading>
-            </div>
-
-            <form wire:submit.prevent="createOperator" class="space-y-4">
-                <flux:input wire:model="name" label="Nama Lengkap" placeholder="Nama Operator" required />
-                <flux:input wire:model="email" type="email" label="Email" placeholder="operator@toko.com" required />
-                <flux:input wire:model="password" type="password" label="Password" required />
-                
-                <div class="flex justify-end gap-2 pt-4">
-                    <flux:modal.close>
-                        <flux:button variant="ghost">Batal</flux:button>
-                    </flux:modal.close>
-                    <flux:button type="submit" variant="primary">Simpan</flux:button>
-                </div>
-            </form>
-        </div>
-    </flux:modal>
+    <!-- Create Operator Modal -->
+    <x-modal wire:model="showCreateModal" title="Tambah Operator">
+        <p class="text-sm text-base-content/70 mb-4">Buat akun kasir baru untuk mengelola transaksi.</p>
+        <x-form wire:submit="createOperator">
+            <x-input wire:model="name" label="Nama Lengkap" placeholder="Nama Operator" required />
+            <x-input wire:model="email" type="email" label="Email" placeholder="operator@toko.com" required />
+            <x-input wire:model="password" type="password" label="Password" required />
+            
+            <x-slot:actions>
+                <x-button label="Batal" wire:click="$set('showCreateModal', false)" class="btn-ghost" />
+                <x-button label="Simpan" type="submit" class="btn-primary" spinner="createOperator" />
+            </x-slot:actions>
+        </x-form>
+    </x-modal>
 
     <!-- Delete Confirmation Modal -->
-    <flux:modal wire:model="showDeleteModal" class="md:w-96">
-        <div class="space-y-6">
-            <div>
-                <flux:heading size="lg">Hapus Operator?</flux:heading>
-                <flux:subheading>Apakah Anda yakin ingin menghapus operator ini? Tindakan ini tidak dapat dibatalkan.</flux:subheading>
-            </div>
+    <x-modal wire:model="showDeleteModal" title="Hapus Operator?">
+        <p class="py-2 text-base-content/70">Apakah Anda yakin ingin menghapus operator ini? Tindakan ini tidak dapat dibatalkan.</p>
 
-            <div class="flex justify-end gap-2 pt-4">
-                <flux:modal.close>
-                    <flux:button variant="ghost">Batal</flux:button>
-                </flux:modal.close>
-                <flux:button wire:click="executeDelete" variant="danger">Hapus</flux:button>
-            </div>
-        </div>
-    </flux:modal>
+        <x-slot:actions>
+            <x-button label="Batal" wire:click="$set('showDeleteModal', false)" class="btn-ghost" />
+            <x-button label="Hapus" wire:click="executeDelete" class="btn-error text-white" spinner="executeDelete" />
+        </x-slot:actions>
+    </x-modal>
 </div>

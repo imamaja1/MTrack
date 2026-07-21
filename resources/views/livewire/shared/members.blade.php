@@ -4,16 +4,16 @@ use App\Models\Member;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 use Livewire\WithPagination;
-use Flux\Flux;
+use Mary\Traits\Toast;
 
 new class extends Component {
-    use WithPagination;
+    use WithPagination, Toast;
 
     public $name = '';
     public $phone = '';
     
-    public $isModalOpen = false;
-    public $showDeleteModal = false;
+    public bool $isModalOpen = false;
+    public bool $showDeleteModal = false;
     public $deletingId = null;
 
     public function rules()
@@ -51,7 +51,7 @@ new class extends Component {
         $this->reset(['name', 'phone']);
         $this->isModalOpen = false;
         
-        Flux::toast('Member berhasil ditambahkan!', variant: 'success');
+        $this->success('Member berhasil ditambahkan!');
     }
 
     public function confirmDelete($id)
@@ -66,7 +66,7 @@ new class extends Component {
             $adminId = Auth::user()->role === 'operator' ? Auth::user()->admin_id : Auth::id();
             $member = Member::where('admin_id', $adminId)->findOrFail($this->deletingId);
             $member->delete();
-            Flux::toast('Member berhasil dihapus.', variant: 'success');
+            $this->success('Member berhasil dihapus.');
         }
         $this->showDeleteModal = false;
         $this->deletingId = null;
@@ -85,83 +85,73 @@ new class extends Component {
     <div class="flex flex-col gap-6">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-                <h1 class="text-2xl font-bold text-zinc-900 dark:text-white">Member Pelanggan</h1>
-                <p class="text-zinc-500 dark:text-zinc-400">Kelola daftar pelanggan setia toko Anda.</p>
+                <h1 class="text-2xl font-bold text-base-content">Member Pelanggan</h1>
+                <p class="text-sm text-base-content/70">Kelola daftar pelanggan setia toko Anda.</p>
             </div>
-            <flux:button wire:click="openModal" variant="primary" icon="plus">Tambah Member</flux:button>
+            <x-button label="Tambah Member" wire:click="openModal" icon="o-plus" class="btn-primary" />
         </div>
 
-        <flux:card class="p-0">
+        <x-card class="p-0 bg-base-100 shadow-sm border border-base-200 overflow-hidden">
             <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm text-zinc-500 dark:text-zinc-400">
-                    <thead class="bg-zinc-50 text-xs uppercase text-zinc-700 dark:bg-zinc-800/50 dark:text-zinc-300">
+                <table class="table w-full">
+                    <thead>
                         <tr>
-                            <th class="px-6 py-3">Nama</th>
-                            <th class="px-6 py-3">No. HP</th>
-                            <th class="px-6 py-3">Poin</th>
-                            <th class="px-6 py-3">Bergabung Sejak</th>
-                            <th class="px-6 py-3">Aksi</th>
+                            <th>Nama</th>
+                            <th>No. HP</th>
+                            <th>Poin</th>
+                            <th>Bergabung Sejak</th>
+                            <th>Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($members as $member)
-                        <tr class="border-b border-zinc-200 dark:border-zinc-700">
-                            <td class="px-6 py-4 font-medium text-zinc-900 dark:text-white">{{ $member->name }}</td>
-                            <td class="px-6 py-4">{{ $member->phone ?? '-' }}</td>
-                            <td class="px-6 py-4">
-                                <flux:badge color="amber">{{ $member->points }}</flux:badge>
+                        <tr>
+                            <td class="font-medium text-base-content">{{ $member->name }}</td>
+                            <td>{{ $member->phone ?? '-' }}</td>
+                            <td>
+                                <x-badge value="{{ $member->points }}" class="badge-warning badge-sm" />
                             </td>
-                            <td class="px-6 py-4">{{ $member->created_at->format('d M Y') }}</td>
-                            <td class="px-6 py-4">
-                                <flux:button wire:click="confirmDelete({{ $member->id }})" size="sm" variant="danger" icon="trash" class="px-2" />
+                            <td>{{ $member->created_at->format('d M Y') }}</td>
+                            <td>
+                                <x-button wire:click="confirmDelete({{ $member->id }})" icon="o-trash" class="btn-error btn-sm text-white" />
                             </td>
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="5" class="px-6 py-4 text-center text-zinc-500">Belum ada member.</td>
+                            <td colspan="5" class="text-center text-base-content/60 py-4">Belum ada member.</td>
                         </tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
             @if($members->hasPages())
-                <div class="p-4 border-t border-zinc-200 dark:border-zinc-700">
+                <div class="p-4 border-t border-base-200">
                     {{ $members->links() }}
                 </div>
             @endif
-        </flux:card>
+        </x-card>
     </div>
 
-    <flux:modal wire:model="isModalOpen" class="w-full max-w-md">
-        <div class="p-6">
-            <h2 class="text-xl font-bold mb-4">Tambah Member Baru</h2>
+    <!-- Add Member Modal -->
+    <x-modal wire:model="isModalOpen" title="Tambah Member Baru">
+        <x-form wire:submit="save">
+            <x-input wire:model="name" label="Nama Pelanggan" placeholder="Masukkan nama..." required />
+            <x-input wire:model="phone" label="Nomor Handphone" placeholder="Contoh: 08123456789" />
             
-            <form wire:submit="save" class="flex flex-col gap-4">
-                <flux:input wire:model="name" label="Nama Pelanggan" placeholder="Masukkan nama..." required />
-                <flux:input wire:model="phone" label="Nomor Handphone" placeholder="Contoh: 08123456789" />
-                
-                <div class="flex justify-end gap-3 mt-4">
-                    <flux:button wire:click="$set('isModalOpen', false)" variant="ghost">Batal</flux:button>
-                    <flux:button type="submit" variant="primary">Simpan</flux:button>
-                </div>
-            </form>
-        </div>
-    </flux:modal>
+            <x-slot:actions>
+                <x-button label="Batal" wire:click="$set('isModalOpen', false)" class="btn-ghost" />
+                <x-button label="Simpan" type="submit" class="btn-primary" spinner="save" />
+            </x-slot:actions>
+        </x-form>
+    </x-modal>
 
     <!-- Delete Confirmation Modal -->
-    <flux:modal wire:model="showDeleteModal" class="md:w-96">
-        <div class="space-y-6">
-            <div>
-                <flux:heading size="lg">Hapus Member?</flux:heading>
-                <flux:subheading>Apakah Anda yakin ingin menghapus member ini? Tindakan ini tidak dapat dibatalkan.</flux:subheading>
-            </div>
+    <x-modal wire:model="showDeleteModal" title="Hapus Member?">
+        <p class="py-2 text-base-content/70">Apakah Anda yakin ingin menghapus member ini? Tindakan ini tidak dapat dibatalkan.</p>
 
-            <div class="flex justify-end gap-2 pt-4">
-                <flux:modal.close>
-                    <flux:button variant="ghost">Batal</flux:button>
-                </flux:modal.close>
-                <flux:button wire:click="executeDelete" variant="danger">Hapus</flux:button>
-            </div>
-        </div>
-    </flux:modal>
+        <x-slot:actions>
+            <x-button label="Batal" wire:click="$set('showDeleteModal', false)" class="btn-ghost" />
+            <x-button label="Hapus" wire:click="executeDelete" class="btn-error text-white" spinner="executeDelete" />
+        </x-slot:actions>
+    </x-modal>
 </div>

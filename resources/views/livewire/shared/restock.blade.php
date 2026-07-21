@@ -6,17 +6,20 @@ use App\Models\Product;
 use App\Models\StockMovement;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
-use Flux\Flux;
+use Mary\Traits\Toast;
 
 new class extends Component
 {
-    use WithPagination;
+    use WithPagination, Toast;
 
     public $editingId = null;
     public $deletingId = null;
     public $selectedProductId = '';
     public $qtyToAdd = 1;
     public $notes = '';
+
+    public bool $showRestockModal = false;
+    public bool $showDeleteModal = false;
 
     public function getRestocksProperty()
     {
@@ -44,8 +47,7 @@ new class extends Component
         $this->qtyToAdd = 1;
         $this->notes = '';
         $this->resetValidation();
-        
-        $this->dispatch('modal-show', name: 'restock-modal');
+        $this->showRestockModal = true;
     }
 
     public function editRestock($id)
@@ -61,14 +63,13 @@ new class extends Component
         $this->qtyToAdd = $movement->qty;
         $this->notes = $movement->notes;
         $this->resetValidation();
-        
-        $this->dispatch('modal-show', name: 'restock-modal');
+        $this->showRestockModal = true;
     }
 
     public function confirmDelete($id)
     {
         $this->deletingId = $id;
-        $this->dispatch('modal-show', name: 'delete-restock-modal');
+        $this->showDeleteModal = true;
     }
 
     public function deleteRestock()
@@ -92,8 +93,8 @@ new class extends Component
             $movement->delete();
         });
 
-        $this->dispatch('modal-close', name: 'delete-restock-modal');
-        Flux::toast('Riwayat penambahan stok berhasil dihapus.', variant: 'success');
+        $this->showDeleteModal = false;
+        $this->success('Riwayat penambahan stok berhasil dihapus.');
         $this->deletingId = null;
     }
 
@@ -124,7 +125,7 @@ new class extends Component
                     'notes' => $this->notes ?: 'Restock manual (diubah)',
                 ]);
                 
-                Flux::toast('Berhasil memperbarui data stok.', variant: 'success');
+                $this->success('Berhasil memperbarui data stok.');
             } else {
                 $stockBefore = $product->stock;
                 $product->increment('stock', $this->qtyToAdd);
@@ -139,11 +140,11 @@ new class extends Component
                     'notes' => $this->notes ?: 'Restock manual',
                 ]);
                 
-                Flux::toast('Berhasil menambahkan stok barang.', variant: 'success');
+                $this->success('Berhasil menambahkan stok barang.');
             }
         });
 
-        $this->dispatch('modal-close', name: 'restock-modal');
+        $this->showRestockModal = false;
         
         $this->editingId = null;
         $this->selectedProductId = '';
@@ -155,108 +156,103 @@ new class extends Component
 
 <div>
     <div class="flex flex-col gap-6">
-        <div class="flex flex-col items-start gap-4">
+        <div class="flex flex-col items-start gap-4 md:flex-row md:justify-between md:items-center">
             <div>
-                <h1 class="text-2xl font-bold text-zinc-900 dark:text-white">Riwayat Restock Barang</h1>
-                <p class="text-zinc-500 dark:text-zinc-400">Daftar catatan penambahan stok barang oleh operator/admin.</p>
+                <h1 class="text-2xl font-bold text-base-content">Riwayat Restock Barang</h1>
+                <p class="text-sm text-base-content/70">Daftar catatan penambahan stok barang oleh operator/admin.</p>
             </div>
             
-            <flux:button wire:click="openRestockModal" variant="primary" icon="plus">Tambah Stok Barang</flux:button>
+            <x-button label="Tambah Stok Barang" wire:click="openRestockModal" icon="o-plus" class="btn-primary" />
         </div>
 
-        <flux:card class="p-0">
-
-        <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm text-zinc-500 dark:text-zinc-400">
-                    <thead class="bg-zinc-50 text-xs uppercase text-zinc-700 dark:bg-zinc-800/50 dark:text-zinc-300">
+        <x-card class="p-0 bg-base-100 shadow-sm border border-base-200 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="table w-full">
+                    <thead>
                         <tr>
-                            <th class="px-6 py-3">Tanggal</th>
-                            <th class="px-6 py-3">Produk</th>
-                            <th class="px-6 py-3">Petugas</th>
-                            <th class="px-6 py-3">Jumlah Ditambah</th>
-                            <th class="px-6 py-3">Keterangan</th>
-                            <th class="px-6 py-3">Aksi</th>
+                            <th>Tanggal</th>
+                            <th>Produk</th>
+                            <th>Petugas</th>
+                            <th>Jumlah Ditambah</th>
+                            <th>Keterangan</th>
+                            <th>Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse ($this->restocks as $log)
-                            <tr class="border-b border-zinc-200 dark:border-zinc-700">
-                                <td class="px-6 py-4 text-xs text-zinc-500">{{ $log->created_at->format('d M Y, H:i') }}</td>
-                                <td class="px-6 py-4 font-medium text-zinc-800 dark:text-zinc-200">
+                            <tr>
+                                <td class="text-xs text-base-content/70">{{ $log->created_at->format('d M Y, H:i') }}</td>
+                                <td class="font-medium text-base-content">
                                     {{ $log->product->name }} <br>
-                                    <span class="text-[10px] text-zinc-400 font-mono">{{ $log->product->sku }}</span>
+                                    <span class="text-[10px] text-base-content/50 font-mono">{{ $log->product->sku }}</span>
                                 </td>
-                                <td class="px-6 py-4">{{ optional($log->user)->name ?? 'Sistem' }}</td>
-                                <td class="px-6 py-4">
-                                    <span class="font-bold text-green-600">+{{ $log->qty }}</span>
+                                <td>{{ optional($log->user)->name ?? 'Sistem' }}</td>
+                                <td>
+                                    <span class="font-bold text-success">+{{ $log->qty }}</span>
                                 </td>
-                                <td class="px-6 py-4 text-sm italic text-zinc-500">{{ $log->notes }}</td>
-                                <td class="px-6 py-4">
+                                <td class="text-sm italic text-base-content/70">{{ $log->notes }}</td>
+                                <td>
                                     <div class="flex items-center gap-2">
-                                        <flux:button wire:click="editRestock({{ $log->id }})" size="sm" variant="subtle" icon="pencil-square" class="!text-blue-600 hover:!bg-blue-100" />
-                                        <flux:button wire:click="confirmDelete({{ $log->id }})" size="sm" variant="subtle" icon="trash" class="!text-red-600 hover:!bg-red-100" />
+                                        <x-button wire:click="editRestock({{ $log->id }})" icon="o-pencil-square" class="btn-ghost btn-sm text-info" />
+                                        <x-button wire:click="confirmDelete({{ $log->id }})" icon="o-trash" class="btn-ghost btn-sm text-error" />
                                     </div>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="px-6 py-4 text-center text-zinc-500">
+                                <td colspan="6" class="text-center text-base-content/60 py-4">
                                     Belum ada riwayat penambahan barang.
                                 </td>
                             </tr>
                         @endforelse
                     </tbody>
                 </table>
-        </div>
-        <div class="p-4 border-t border-zinc-200 dark:border-zinc-700">
-            {{ $this->restocks->links() }}
-        </div>
-    </flux:card>
+            </div>
+            <div class="p-4 border-t border-base-200">
+                {{ $this->restocks->links() }}
+            </div>
+        </x-card>
     </div>
 
     <!-- Restock Edit/Create Modal -->
-    <flux:modal name="restock-modal" class="md:w-[500px]">
-        <form wire:submit.prevent="saveStock" class="flex flex-col gap-4">
-            <flux:heading class="text-lg">{{ $editingId ? 'Edit Data Penambahan' : 'Form Tambah Stok' }}</flux:heading>
+    <x-modal wire:model="showRestockModal" :title="$editingId ? 'Edit Data Penambahan' : 'Form Tambah Stok'">
+        <x-form wire:submit="saveStock">
+            @php
+                $productOptions = $this->products->map(fn($p) => [
+                    'id' => $p->id,
+                    'name' => $p->name . ' (Sisa: ' . $p->stock . ')'
+                ]);
+            @endphp
+
+            <x-select
+                wire:model="selectedProductId"
+                label="Pilih Barang"
+                :options="$productOptions"
+                placeholder="-- Pilih Produk --"
+                placeholder-value=""
+                :disabled="$editingId !== null"
+                required
+            />
             
-            <flux:select wire:model="selectedProductId" label="Pilih Barang" placeholder="-- Pilih Produk --" :disabled="$editingId !== null" required>
-                <option value=""></option>
-                @foreach($this->products as $product)
-                    <option value="{{ $product->id }}">{{ $product->name }} (Sisa: {{ $product->stock }})</option>
-                @endforeach
-            </flux:select>
+            <x-input wire:model="qtyToAdd" type="number" label="Jumlah Penambahan" min="1" required />
+            <x-input wire:model="notes" label="Keterangan (Opsional)" placeholder="Contoh: Barang masuk dari supplier A" />
             
-            <flux:input wire:model="qtyToAdd" type="number" label="Jumlah Penambahan" min="1" required />
-            
-            <flux:input wire:model="notes" label="Keterangan (Opsional)" placeholder="Contoh: Barang masuk dari supplier A" />
-            
-            <div class="flex justify-end gap-2 mt-4">
-                <flux:modal.close>
-                    <flux:button variant="outline">Batal</flux:button>
-                </flux:modal.close>
-                <flux:button type="submit" variant="primary">Simpan Stok</flux:button>
-            </div>
-        </form>
-    </flux:modal>
+            <x-slot:actions>
+                <x-button label="Batal" wire:click="$set('showRestockModal', false)" class="btn-ghost" />
+                <x-button label="Simpan Stok" type="submit" class="btn-primary" spinner="saveStock" />
+            </x-slot:actions>
+        </x-form>
+    </x-modal>
 
     <!-- Delete Confirmation Modal -->
-    <flux:modal name="delete-restock-modal" class="md:w-[400px]">
-        <div class="flex flex-col gap-4">
-            <div class="flex items-center gap-3 text-red-600">
-                <flux:icon.exclamation-triangle class="w-8 h-8" />
-                <flux:heading class="text-lg text-red-600">Hapus Riwayat Stok?</flux:heading>
-            </div>
-            
-            <p class="text-sm text-zinc-600 dark:text-zinc-400">
-                Apakah Anda yakin ingin menghapus data riwayat ini? Tindakan ini akan <b>menarik kembali stok barang</b> sejumlah yang pernah ditambahkan. Aksi ini tidak dapat dibatalkan.
-            </p>
-            
-            <div class="flex justify-end gap-2 mt-4">
-                <flux:modal.close>
-                    <flux:button variant="outline">Batal</flux:button>
-                </flux:modal.close>
-                <flux:button wire:click="deleteRestock" variant="danger">Ya, Hapus</flux:button>
-            </div>
-        </div>
-    </flux:modal>
+    <x-modal wire:model="showDeleteModal" title="Hapus Riwayat Stok?">
+        <p class="py-2 text-base-content/70">
+            Apakah Anda yakin ingin menghapus data riwayat ini? Tindakan ini akan <b>menarik kembali stok barang</b> sejumlah yang pernah ditambahkan. Aksi ini tidak dapat dibatalkan.
+        </p>
+        
+        <x-slot:actions>
+            <x-button label="Batal" wire:click="$set('showDeleteModal', false)" class="btn-ghost" />
+            <x-button label="Ya, Hapus" wire:click="deleteRestock" class="btn-error text-white" spinner="deleteRestock" />
+        </x-slot:actions>
+    </x-modal>
 </div>

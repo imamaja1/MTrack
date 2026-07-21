@@ -9,13 +9,17 @@ use App\Models\Member;
 use App\Models\Coupon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Mary\Traits\Toast;
 
 new class extends Component
 {
+    use Toast;
+
     public $search = '';
     public $cart = [];
     public $original_cart = [];
     public $receiptData = null;
+    public bool $showCheckoutModal = false;
     
     // Member & Coupon
     public $member_id = '';
@@ -350,9 +354,6 @@ new class extends Component
                             ->orderBy('min_purchase', 'desc')
                             ->first();
                         
-                        // We might want to only add points on FIRST save, or when fully paid.
-                        // But for simplicity, we keep original logic (though it might duplicate points if edited)
-                        // To avoid duplicate, we can just skip it here or do it properly. Let's skip updating points on edit.
                         if (!$this->transaction_id && $benefit && $benefit->cashback_nominal > 0) {
                             $member->increment('points', $benefit->cashback_nominal);
                         }
@@ -361,7 +362,8 @@ new class extends Component
                 $transactionIdToPay = $transaction->id;
             });
 
-            Flux::toast('Tagihan berhasil disimpan.', variant: 'success');
+            $this->showCheckoutModal = false;
+            $this->success('Tagihan berhasil disimpan.');
             $this->redirect(route('operator.history', ['pay' => $transactionIdToPay]), navigate: true);
         } catch (\Exception $e) {
             $this->addError('cart', $e->getMessage());
@@ -382,16 +384,16 @@ new class extends Component
             <div>
                 <strong class="font-bold">Mode Buka Tagihan:</strong> Anda sedang menambahkan pesanan baru ke <strong>{{ $this->existingTransaction->invoice_number }}</strong>.
             </div>
-            <flux:button href="{{ route('operator.history') }}" wire:navigate size="sm" variant="outline">Batal</flux:button>
+            <x-button label="Batal" link="{{ route('operator.history') }}" wire:navigate class="btn-outline btn-sm" />
         </div>
     @endif
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1">
     <!-- Product List -->
     <div class="lg:col-span-2 flex flex-col">
-        <flux:card class="flex-1">
+        <x-card class="flex-1 bg-base-100 shadow-sm border border-base-200">
             <div class="mb-4">
-                <flux:input wire:model.live.debounce.300ms="search" placeholder="Cari nama produk atau SKU..." icon="magnifying-glass" />
+                <x-input wire:model.live.debounce.300ms="search" placeholder="Cari nama produk atau SKU..." icon="o-magnifying-glass" />
             </div>
             @error('cart')
                 <div class="mb-4 p-3 bg-red-100 text-red-700 rounded">{{ $message }}</div>
@@ -399,30 +401,30 @@ new class extends Component
             
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                 @foreach($this->products as $product)
-                    <div wire:click="addToCart({{ $product->id }})" class="relative p-4 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-[#141414] hover:border-orange-500 dark:hover:border-orange-500 hover:shadow-lg transition-all duration-200 cursor-pointer flex flex-col justify-between min-h-[140px] group">
+                    <div wire:click="addToCart({{ $product->id }})" class="relative p-4 border border-base-200 rounded-xl bg-base-100 hover:border-primary hover:shadow-lg transition-all duration-200 cursor-pointer flex flex-col justify-between min-h-[140px] group">
                         
                         <!-- Top: SKU and Stock -->
                         <div class="flex justify-between items-start mb-2">
-                            <span class="text-[10px] uppercase font-bold tracking-wider text-zinc-400 group-hover:text-orange-500 transition-colors">{{ $product->sku }}</span>
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-base-content/50 group-hover:text-primary transition-colors">{{ $product->sku }}</span>
                             @if($product->stock <= $product->min_stock_alert)
-                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-error/10 text-error">
                                     Sisa {{ $product->stock }}
                                 </span>
                             @else
-                                <span class="text-xs text-zinc-500 dark:text-zinc-400">
+                                <span class="text-xs text-base-content/60">
                                     Stok: {{ $product->stock }}
                                 </span>
                             @endif
                         </div>
                         
                         <!-- Middle: Product Name -->
-                        <div class="font-semibold text-sm leading-snug text-zinc-800 dark:text-zinc-100 mb-4 line-clamp-2" title="{{ $product->name }}">
+                        <div class="font-semibold text-sm leading-snug text-base-content mb-4 line-clamp-2" title="{{ $product->name }}">
                             {{ $product->name }}
                         </div>
                         
                         <!-- Bottom: Price -->
                         <div class="mt-auto">
-                            <div class="text-orange-600 dark:text-orange-500 font-bold text-lg leading-none">
+                            <div class="text-primary font-bold text-lg leading-none">
                                 Rp {{ number_format($product->selling_price, 0, ',', '.') }}
                             </div>
                         </div>
@@ -430,135 +432,145 @@ new class extends Component
                     </div>
                 @endforeach
             </div>
-        </flux:card>
+        </x-card>
     </div>
 
     <!-- Cart Sidebar -->
     <div class="lg:col-span-1">
         <div class="lg:sticky lg:top-4">
-            <flux:card class="h-[85vh] lg:h-[92vh] flex flex-col">
-                <flux:heading class="mb-4 text-lg">Keranjang Belanja</flux:heading>
-                
-                <div class="flex-1 overflow-y-auto overflow-x-hidden mb-4 border-b border-zinc-200 dark:border-zinc-700">
-                @forelse($cart as $id => $item)
-                    <div class="flex justify-between items-center py-3 border-b border-zinc-100 dark:border-zinc-800 last:border-0 w-full">
-                        <div class="flex-1 min-w-0 pr-2">
-                            <div class="text-sm font-medium leading-tight line-clamp-1 mb-1 truncate">{{ $item['name'] }}</div>
-                            <div class="text-xs text-orange-600 dark:text-orange-500 font-semibold">Rp {{ number_format($item['price'], 0, ',', '.') }}</div>
-                        </div>
-                        <div class="flex items-center gap-1 shrink-0">
-                            <flux:input type="number" wire:model.live.debounce.500ms="cart.{{ $id }}.qty" class="w-12 sm:w-16 !h-8 !px-1 text-center" min="1" />
-                            <flux:button wire:click="removeFromCart({{ $id }})" variant="danger" icon="trash" size="sm" class="h-8 w-8 px-0 shrink-0" />
-                        </div>
-                    </div>
-                @empty
-                    <div class="flex flex-col items-center justify-center py-12 text-zinc-500">
-                        <flux:icon.shopping-bag class="w-12 h-12 mb-3 opacity-20" />
-                        <div class="text-sm">Keranjang masih kosong</div>
-                    </div>
-                @endforelse
-            </div>
-
-            <div class="mt-auto flex flex-col gap-4">
-                
-
-
-                <!-- Totals -->
-                <div class="bg-zinc-50 dark:bg-zinc-800/50 p-4 rounded-xl space-y-2">
-                    <div class="flex justify-between items-center text-sm text-zinc-500">
-                        <span>Subtotal</span>
-                        <span>Rp {{ number_format($this->subtotal, 0, ',', '.') }}</span>
-                    </div>
-                    
-                    @if($this->discount > 0)
-                        <div class="flex justify-between items-center text-sm text-green-600 dark:text-green-400">
-                            <span>Diskon</span>
-                            <span>- Rp {{ number_format($this->discount, 0, ',', '.') }}</span>
-                        </div>
-                    @endif
-                    
-                    <div class="border-t border-zinc-200 dark:border-zinc-700 pt-2 flex justify-between items-center text-lg font-bold">
-                        <span>Total Bayar</span>
-                        <span class="text-orange-600 dark:text-orange-500">Rp {{ number_format($this->total, 0, ',', '.') }}</span>
-                    </div>
-                    
-                    @if($this->cashbackInfo > 0)
-                        <div class="mt-2 flex justify-between items-center text-sm text-blue-600 dark:text-blue-400 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-100 dark:border-blue-800">
-                            <span class="flex items-center gap-1"><flux:icon.sparkles class="w-4 h-4" /> Cashback Poin</span>
-                            <span class="font-bold">+ {{ number_format($this->cashbackInfo, 0, ',', '.') }}</span>
-                        </div>
-                    @endif
+            <div class="bg-base-100 shadow-sm border border-base-200 rounded-2xl p-4 h-auto lg:h-[calc(100vh-6.5rem)] lg:max-h-[calc(100vh-6.5rem)] flex flex-col">
+                <div class="flex items-center justify-between mb-3 shrink-0">
+                    <h3 class="text-lg font-bold text-base-content flex items-center gap-2">
+                        <x-icon name="o-shopping-bag" class="w-5 h-5 text-primary" />
+                        Keranjang Belanja
+                    </h3>
+                    <span class="badge badge-primary badge-sm font-semibold">{{ collect($cart)->sum('qty') }} item</span>
                 </div>
                 
-                <flux:button x-on:click="$dispatch('modal-show', {name: 'checkout-modal'})" variant="primary" class="w-full text-base" :disabled="empty($cart)">
-                    Simpan Tagihan (Open Bill)
-                </flux:button>
+                <div class="flex-1 overflow-y-auto overflow-x-hidden my-2 pr-1 border-y border-base-200 divide-y divide-base-200 min-h-[140px] max-h-[280px] lg:max-h-none">
+                    @forelse($cart as $id => $item)
+                        <div class="flex justify-between items-center py-3 w-full gap-2">
+                            <div class="flex-1 min-w-0">
+                                <div class="text-sm font-medium leading-tight line-clamp-1 mb-1 text-base-content">{{ $item['name'] }}</div>
+                                <div class="text-xs text-primary font-semibold">Rp {{ number_format($item['price'], 0, ',', '.') }}</div>
+                            </div>
+                            <div class="flex items-center gap-1 shrink-0">
+                                <input type="number" wire:model.live.debounce.500ms="cart.{{ $id }}.qty" class="input input-bordered input-sm w-16 text-center font-bold text-base-content bg-base-100" min="1" />
+                                <x-button wire:click="removeFromCart({{ $id }})" icon="o-trash" class="btn-error btn-sm btn-square text-white shrink-0" />
+                            </div>
+                        </div>
+                    @empty
+                        <div class="flex flex-col items-center justify-center py-12 text-base-content/50">
+                            <x-icon name="o-shopping-bag" class="w-12 h-12 mb-2 opacity-30" />
+                            <div class="text-sm">Keranjang masih kosong</div>
+                        </div>
+                    @endforelse
+                </div>
+
+                <div class="mt-auto shrink-0 flex flex-col gap-3 pt-2">
+                    <!-- Totals -->
+                    <div class="bg-base-200/50 p-3.5 rounded-xl space-y-2 border border-base-200">
+                        <div class="flex justify-between items-center text-sm text-base-content/70">
+                            <span>Subtotal</span>
+                            <span class="font-medium text-base-content">Rp {{ number_format($this->subtotal, 0, ',', '.') }}</span>
+                        </div>
+                        
+                        @if($this->discount > 0)
+                            <div class="flex justify-between items-center text-sm text-success font-medium">
+                                <span>Diskon</span>
+                                <span>- Rp {{ number_format($this->discount, 0, ',', '.') }}</span>
+                            </div>
+                        @endif
+                        
+                        <div class="border-t border-base-200 pt-2 flex justify-between items-center text-base font-bold text-base-content">
+                            <span>Total Bayar</span>
+                            <span class="text-primary text-xl">Rp {{ number_format($this->total, 0, ',', '.') }}</span>
+                        </div>
+                        
+                        @if($this->cashbackInfo > 0)
+                            <div class="mt-2 flex justify-between items-center text-xs text-info p-2 bg-info/10 rounded-lg border border-info/20">
+                                <span class="flex items-center gap-1 font-medium"><x-icon name="o-sparkles" class="w-4 h-4" /> Cashback Poin</span>
+                                <span class="font-bold">+ {{ number_format($this->cashbackInfo, 0, ',', '.') }}</span>
+                            </div>
+                        @endif
+                    </div>
+                    
+                    <x-button wire:click="$set('showCheckoutModal', true)" label="Simpan Tagihan (Open Bill)" class="btn-primary w-full text-base font-bold shadow-md" :disabled="empty($cart)" />
+                </div>
             </div>
-        </flux:card>
         </div>
     </div>
 </div>
 
-<flux:modal name="checkout-modal" class="md:w-96 space-y-6">
-    <div>
-        <flux:heading size="lg">Pelanggan & Promo</flux:heading>
-        <flux:subheading>Pilih member dan masukkan kupon sebelum menyimpan tagihan (opsional).</flux:subheading>
+<!-- Mobile & Tablet Sticky Bottom Floating Checkout Bar -->
+@if(!empty($cart))
+    <div class="lg:hidden fixed bottom-4 left-4 right-4 z-40 bg-base-100/95 backdrop-blur-md border border-base-300 shadow-2xl rounded-2xl p-3 flex items-center justify-between">
+        <div>
+            <div class="text-xs text-base-content/70">{{ collect($cart)->sum('qty') }} item di keranjang</div>
+            <div class="font-bold text-primary text-base">Rp {{ number_format($this->total, 0, ',', '.') }}</div>
+        </div>
+        <x-button wire:click="$set('showCheckoutModal', true)" label="Tagihan / Bayar" icon="o-shopping-bag" class="btn-primary btn-sm font-bold shadow-sm" />
     </div>
+@endif
 
+<x-modal wire:model="showCheckoutModal" title="Pelanggan & Promo" subtitle="Pilih member dan masukkan kupon sebelum menyimpan tagihan (opsional).">
     <!-- Member Selection -->
     <div class="space-y-4">
-        <flux:input wire:model="customer_name" label="Nama Pembeli / No Meja" placeholder="Contoh: Budi atau Meja 4..." />
+        <x-input wire:model="customer_name" label="Nama Pembeli / No Meja" placeholder="Contoh: Budi atau Meja 4..." />
         
-        <flux:select wire:model.live="member_id" label="Atau Pilih Member (Opsional)" placeholder="Pilih Member...">
-            <option value="">-- Bukan Member --</option>
-            @foreach($this->members as $member)
-                <option value="{{ $member->id }}">{{ $member->name }} {{ $member->phone ? '('.$member->phone.')' : '' }}</option>
-            @endforeach
-        </flux:select>
+        @php
+            $memberOptions = array_merge(
+                [['id' => '', 'name' => '-- Bukan Member --']],
+                $this->members->map(fn($m) => [
+                    'id' => $m->id,
+                    'name' => $m->name . ($m->phone ? ' ('.$m->phone.')' : '')
+                ])->toArray()
+            );
+        @endphp
+
+        <x-select wire:model.live="member_id" label="Atau Pilih Member (Opsional)" :options="$memberOptions" />
     </div>
 
     <!-- Coupon Section -->
-    <div>
+    <div class="mt-4">
         @if($applied_coupon)
-            <div class="flex items-center justify-between p-3 bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 rounded-lg">
-                <div class="flex items-center gap-2 text-green-700 dark:text-green-400">
-                    <flux:icon.ticket class="w-5 h-5" />
+            <div class="flex items-center justify-between p-3 bg-success/10 border border-success/20 rounded-lg">
+                <div class="flex items-center gap-2 text-success">
+                    <x-icon name="o-ticket" class="w-5 h-5" />
                     <div class="text-sm font-bold">{{ $applied_coupon['code'] }} applied!</div>
                 </div>
-                <flux:button wire:click="removeCoupon" size="sm" icon="x-mark" class="!text-green-700 hover:!bg-green-200 bg-transparent shadow-none" />
+                <x-button wire:click="removeCoupon" icon="o-x-mark" class="btn-ghost btn-sm text-success" />
             </div>
         @else
             <div class="flex gap-2 items-end">
                 <div class="flex-1">
-                    <flux:input wire:model="coupon_code" label="Kupon Diskon" placeholder="Masukkan kode promo" style="text-transform: uppercase" />
+                    <x-input wire:model="coupon_code" label="Kupon Diskon" placeholder="Masukkan kode promo" style="text-transform: uppercase" />
                 </div>
-                <flux:button wire:click="applyCoupon" variant="outline">Gunakan</flux:button>
+                <x-button wire:click="applyCoupon" label="Gunakan" class="btn-outline" />
             </div>
         @endif
         
         @if($coupon_error)
-            <div class="text-xs text-red-500 mt-1">{{ $coupon_error }}</div>
+            <div class="text-xs text-error mt-1">{{ $coupon_error }}</div>
         @endif
     </div>
 
     <!-- Totals summary for modal -->
-    <div class="bg-zinc-50 dark:bg-zinc-800/50 p-3 rounded-lg border border-zinc-200 dark:border-zinc-700">
+    <div class="bg-base-200/50 p-3 rounded-lg border border-base-200 mt-4">
         <div class="flex justify-between items-center font-bold">
             <span>Total Akhir</span>
             <span class="text-orange-600 dark:text-orange-500">Rp {{ number_format($this->total, 0, ',', '.') }}</span>
         </div>
         @if($this->cashbackInfo > 0)
-            <div class="text-xs text-blue-600 dark:text-blue-400 mt-1 flex items-center gap-1">
-                <flux:icon.sparkles class="w-3 h-3" /> +{{ number_format($this->cashbackInfo, 0, ',', '.') }} Poin Cashback
+            <div class="text-xs text-info mt-1 flex items-center gap-1">
+                <x-icon name="o-sparkles" class="w-3 h-3" /> +{{ number_format($this->cashbackInfo, 0, ',', '.') }} Poin Cashback
             </div>
         @endif
     </div>
 
-    <div class="flex gap-2">
-        <flux:modal.close>
-            <flux:button variant="ghost" class="w-full">Batal</flux:button>
-        </flux:modal.close>
-        <flux:button wire:click="checkout" variant="primary" class="w-full">Konfirmasi & Simpan</flux:button>
-    </div>
-</flux:modal>
+    <x-slot:actions>
+        <x-button label="Batal" wire:click="$set('showCheckoutModal', false)" class="btn-ghost" />
+        <x-button label="Konfirmasi & Simpan" wire:click="checkout" class="btn-primary" spinner="checkout" />
+    </x-slot:actions>
+</x-modal>
 </div>

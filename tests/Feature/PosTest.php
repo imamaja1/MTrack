@@ -2,11 +2,11 @@
 
 namespace Tests\Feature;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
-use App\Models\User;
 use App\Models\Product;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Tests\TestCase;
 
 class PosTest extends TestCase
 {
@@ -16,9 +16,9 @@ class PosTest extends TestCase
     {
         $admin = User::factory()->create(['role' => 'admin', 'is_active' => true]);
         $operator = User::factory()->create([
-            'role' => 'operator', 
-            'admin_id' => $admin->id, 
-            'is_active' => true
+            'role' => 'operator',
+            'admin_id' => $admin->id,
+            'is_active' => true,
         ]);
 
         $response = $this->actingAs($operator)->get('/pos');
@@ -28,7 +28,7 @@ class PosTest extends TestCase
     public function test_can_add_product_to_cart_and_checkout()
     {
         $admin = User::factory()->create(['role' => 'admin', 'is_active' => true]);
-        
+
         $product = Product::create([
             'admin_id' => $admin->id,
             'sku' => 'TEST-01',
@@ -70,7 +70,7 @@ class PosTest extends TestCase
     public function test_cannot_checkout_if_out_of_stock()
     {
         $admin = User::factory()->create(['role' => 'admin', 'is_active' => true]);
-        
+
         $product = Product::create([
             'admin_id' => $admin->id,
             'sku' => 'TEST-02',

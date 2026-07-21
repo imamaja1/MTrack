@@ -4,10 +4,10 @@ use Livewire\Component;
 use App\Models\Coupon;
 use Illuminate\Support\Facades\Auth;
 use Livewire\WithPagination;
-use Flux\Flux;
+use Mary\Traits\Toast;
 
 new class extends Component {
-    use WithPagination;
+    use WithPagination, Toast;
 
     public $code = '';
     public $type = 'fixed';
@@ -53,14 +53,14 @@ new class extends Component {
 
         $this->reset(['code', 'type', 'value', 'min_purchase', 'expires_at']);
         $this->isModalOpen = false;
-        Flux::toast('Kupon berhasil ditambahkan!', variant: 'success');
+        $this->success('Kupon berhasil ditambahkan!');
     }
 
     public function toggleStatus($id)
     {
         $coupon = Coupon::where('admin_id', Auth::id())->findOrFail($id);
         $coupon->update(['is_active' => !$coupon->is_active]);
-        Flux::toast('Status kupon diubah.', variant: 'success');
+        $this->success('Status kupon diubah.');
     }
 
     public function confirmDelete($id)
@@ -74,7 +74,7 @@ new class extends Component {
         if ($this->deletingId) {
             $coupon = Coupon::where('admin_id', Auth::id())->findOrFail($this->deletingId);
             $coupon->delete();
-            Flux::toast('Kupon berhasil dihapus.', variant: 'success');
+            $this->success('Kupon berhasil dihapus.');
         }
         $this->showDeleteModal = false;
         $this->deletingId = null;
@@ -93,112 +93,104 @@ new class extends Component {
     <div class="flex flex-col gap-6">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-                <h1 class="text-2xl font-bold text-zinc-900 dark:text-white">Kupon Promo</h1>
-                <p class="text-zinc-500 dark:text-zinc-400">Kelola kupon promo untuk menarik lebih banyak pelanggan.</p>
+                <h1 class="text-2xl font-bold text-base-content">Kupon Promo</h1>
+                <p class="text-sm text-base-content/70">Kelola kupon promo untuk menarik lebih banyak pelanggan.</p>
             </div>
-            <flux:button wire:click="$set('isModalOpen', true)" variant="primary" icon="plus">Tambah Kupon</flux:button>
+            <x-button wire:click="openModal" label="Tambah Kupon" icon="o-plus" class="btn-primary" />
         </div>
 
-        <flux:card class="p-0">
+        <x-card class="p-0 bg-base-100 shadow-sm border border-base-200 overflow-hidden">
             <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm text-zinc-500 dark:text-zinc-400">
-                    <thead class="bg-zinc-50 text-xs uppercase text-zinc-700 dark:bg-zinc-800/50 dark:text-zinc-300">
+                <table class="table w-full">
+                    <thead>
                         <tr>
-                            <th class="px-6 py-3">Kode</th>
-                            <th class="px-6 py-3">Diskon</th>
-                            <th class="px-6 py-3">Min. Belanja</th>
-                            <th class="px-6 py-3">Expired</th>
-                            <th class="px-6 py-3">Status</th>
-                            <th class="px-6 py-3">Aksi</th>
+                            <th>Kode</th>
+                            <th>Diskon</th>
+                            <th>Min. Belanja</th>
+                            <th>Expired</th>
+                            <th>Status</th>
+                            <th>Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($coupons as $coupon)
-                        <tr class="border-b border-zinc-200 dark:border-zinc-700">
-                            <td class="px-6 py-4 font-bold text-zinc-900 dark:text-white">{{ $coupon->code }}</td>
-                            <td class="px-6 py-4">
+                        <tr>
+                            <td class="font-bold text-base-content">{{ $coupon->code }}</td>
+                            <td>
                                 @if($coupon->type === 'percentage')
                                     {{ (float) $coupon->value }}%
                                 @else
                                     Rp {{ number_format($coupon->value, 0, ',', '.') }}
                                 @endif
                             </td>
-                            <td class="px-6 py-4">Rp {{ number_format($coupon->min_purchase, 0, ',', '.') }}</td>
-                            <td class="px-6 py-4">
+                            <td>Rp {{ number_format($coupon->min_purchase, 0, ',', '.') }}</td>
+                            <td>
                                 {{ $coupon->expires_at ? $coupon->expires_at->format('d M Y') : 'Selamanya' }}
                             </td>
-                            <td class="px-6 py-4">
+                            <td>
                                 @if($coupon->is_active)
-                                    <flux:badge color="green" size="sm">Aktif</flux:badge>
+                                    <x-badge value="Aktif" class="badge-success badge-sm" />
                                 @else
-                                    <flux:badge color="zinc" size="sm">Nonaktif</flux:badge>
+                                    <x-badge value="Nonaktif" class="badge-neutral badge-sm" />
                                 @endif
                             </td>
-                            <td class="px-6 py-4">
+                            <td>
                                 <div class="flex items-center gap-2">
-                                    <flux:button wire:click="toggleStatus({{ $coupon->id }})" size="sm" variant="{{ $coupon->is_active ? 'danger' : 'primary' }}">
-                                        {{ $coupon->is_active ? 'Matikan' : 'Nyalakan' }}
-                                    </flux:button>
-                                    <flux:button wire:click="confirmDelete({{ $coupon->id }})" size="sm" variant="danger" icon="trash" class="px-2" />
+                                    <x-button wire:click="toggleStatus({{ $coupon->id }})" label="{{ $coupon->is_active ? 'Matikan' : 'Nyalakan' }}" class="btn-sm {{ $coupon->is_active ? 'btn-error btn-outline' : 'btn-primary' }}" />
+                                    <x-button wire:click="confirmDelete({{ $coupon->id }})" icon="o-trash" class="btn-error btn-sm text-white" />
                                 </div>
                             </td>
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="6" class="px-6 py-4 text-center text-zinc-500">Belum ada kupon promo.</td>
+                            <td colspan="6" class="text-center text-base-content/60 py-4">Belum ada kupon promo.</td>
                         </tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
             @if($coupons->hasPages())
-                <div class="p-4 border-t border-zinc-200 dark:border-zinc-700">
+                <div class="p-4 border-t border-base-200">
                     {{ $coupons->links() }}
                 </div>
             @endif
-        </flux:card>
+        </x-card>
     </div>
 
-    <flux:modal wire:model="isModalOpen" class="w-full max-w-md">
-        <div class="p-6">
-            <h2 class="text-xl font-bold mb-4">Buat Kupon Baru</h2>
+    <!-- Create Coupon Modal -->
+    <x-modal wire:model="isModalOpen" title="Buat Kupon Baru">
+        <x-form wire:submit="save">
+            <x-input label="Kode Promo" wire:model="code" placeholder="Contoh: MERDEKA50" required style="text-transform: uppercase" />
             
-            <form wire:submit="save" class="flex flex-col gap-4">
-                <flux:input wire:model="code" label="Kode Promo" placeholder="Contoh: MERDEKA50" required style="text-transform: uppercase" />
-                
-                <flux:select wire:model="type" label="Tipe Diskon">
-                    <option value="percentage">Persentase (%)</option>
-                    <option value="fixed">Potongan Tetap (Rp)</option>
-                </flux:select>
-                
-                <flux:input type="number" wire:model="value" label="Nilai Diskon" placeholder="Misal: 10 atau 50000" required min="0" />
-                
-                <flux:input type="number" wire:model="min_purchase" label="Minimal Belanja (Rp)" placeholder="0 jika tanpa minimal" required min="0" />
-                
-                <flux:input type="date" wire:model="expires_at" label="Berlaku Sampai" />
-                
-                <div class="flex justify-end gap-3 mt-4">
-                    <flux:button wire:click="$set('isModalOpen', false)" variant="outline">Batal</flux:button>
-                    <flux:button type="submit" variant="primary">Simpan</flux:button>
-                </div>
-            </form>
-        </div>
-    </flux:modal>
+            <x-select
+                label="Tipe Diskon"
+                wire:model="type"
+                :options="[
+                    ['id' => 'percentage', 'name' => 'Persentase (%)'],
+                    ['id' => 'fixed', 'name' => 'Potongan Tetap (Rp)']
+                ]"
+            />
+            
+            <x-input type="number" label="Nilai Diskon" wire:model="value" placeholder="Misal: 10 atau 50000" required min="0" />
+            
+            <x-input type="number" label="Minimal Belanja (Rp)" wire:model="min_purchase" placeholder="0 jika tanpa minimal" required min="0" />
+            
+            <x-input type="date" label="Berlaku Sampai" wire:model="expires_at" />
+            
+            <x-slot:actions>
+                <x-button label="Batal" wire:click="$set('isModalOpen', false)" class="btn-ghost" />
+                <x-button label="Simpan" type="submit" class="btn-primary" spinner="save" />
+            </x-slot:actions>
+        </x-form>
+    </x-modal>
 
     <!-- Delete Confirmation Modal -->
-    <flux:modal wire:model="showDeleteModal" class="md:w-96">
-        <div class="space-y-6">
-            <div>
-                <flux:heading size="lg">Hapus Kupon?</flux:heading>
-                <flux:subheading>Apakah Anda yakin ingin menghapus kupon ini? Tindakan ini tidak dapat dibatalkan.</flux:subheading>
-            </div>
+    <x-modal wire:model="showDeleteModal" title="Hapus Kupon?">
+        <p class="py-2 text-base-content/70">Apakah Anda yakin ingin menghapus kupon ini? Tindakan ini tidak dapat dibatalkan.</p>
 
-            <div class="flex justify-end gap-2 pt-4">
-                <flux:modal.close>
-                    <flux:button variant="ghost">Batal</flux:button>
-                </flux:modal.close>
-                <flux:button wire:click="executeDelete" variant="danger">Hapus</flux:button>
-            </div>
-        </div>
-    </flux:modal>
+        <x-slot:actions>
+            <x-button label="Batal" wire:click="$set('showDeleteModal', false)" class="btn-ghost" />
+            <x-button label="Hapus" wire:click="executeDelete" class="btn-error text-white" spinner="executeDelete" />
+        </x-slot:actions>
+    </x-modal>
 </div>

@@ -20,7 +20,7 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
-        
+
         Schema::table('users', function (Blueprint $table) {
             if (Schema::hasColumn('users', 'member_discount_type')) {
                 $table->dropColumn('member_discount_type');
@@ -37,7 +37,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('member_benefits');
-        
+
         Schema::table('users', function (Blueprint $table) {
             $table->enum('member_discount_type', ['fixed', 'percentage'])->default('fixed');
             $table->decimal('member_discount_value', 10, 2)->default(0);

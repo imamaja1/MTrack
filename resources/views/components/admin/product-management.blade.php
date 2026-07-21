@@ -4,12 +4,14 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use App\Models\Product;
 use Illuminate\Validation\Rule;
-use Flux\Flux;
+use Mary\Traits\Toast;
 
 new class extends Component
 {
-    use WithPagination;
+    use WithPagination, Toast;
 
+    public bool $showProductModal = false;
+    public bool $showDeleteModal = false;
     public $editingId = null;
     public $deletingId = null;
     
@@ -37,6 +39,12 @@ new class extends Component
         $this->reset(['editingId', 'sku', 'name', 'cost_price', 'selling_price', 'stock', 'min_stock_alert']);
     }
 
+    public function openCreateModal()
+    {
+        $this->resetFields();
+        $this->showProductModal = true;
+    }
+
     public function editProduct($id)
     {
         $this->resetFields();
@@ -50,7 +58,7 @@ new class extends Component
         $this->stock = $product->stock;
         $this->min_stock_alert = $product->min_stock_alert;
         
-        $this->dispatch('modal-show', name: 'product-modal');
+        $this->showProductModal = true;
     }
 
     public function saveProduct()
@@ -75,21 +83,21 @@ new class extends Component
 
         if ($this->editingId) {
             Product::where('admin_id', auth()->id())->where('id', $this->editingId)->update($data);
-            Flux::toast('Produk berhasil diperbarui.', variant: 'success');
+            $this->success('Produk berhasil diperbarui.');
         } else {
             $data['admin_id'] = auth()->id();
             Product::create($data);
-            Flux::toast('Produk berhasil ditambahkan.', variant: 'success');
+            $this->success('Produk berhasil ditambahkan.');
         }
 
         $this->resetFields();
-        $this->dispatch('modal-close', name: 'product-modal');
+        $this->showProductModal = false;
     }
 
     public function confirmDelete($id)
     {
         $this->deletingId = $id;
-        $this->dispatch('modal-show', name: 'delete-product-modal');
+        $this->showDeleteModal = true;
     }
 
     public function deleteProduct()
@@ -102,14 +110,14 @@ new class extends Component
             $hasMovements = \Illuminate\Support\Facades\DB::table('stock_movements')->where('product_id', $product->id)->exists();
             
             if ($hasTransactions || $hasMovements) {
-                Flux::toast('Produk gagal dihapus karena sudah memiliki riwayat penjualan atau pergerakan stok.', variant: 'danger');
+                $this->error('Produk gagal dihapus karena sudah memiliki riwayat penjualan atau pergerakan stok.');
             } else {
                 $product->delete();
-                Flux::toast('Produk berhasil dihapus.', variant: 'success');
+                $this->success('Produk berhasil dihapus.');
             }
         }
         
-        $this->dispatch('modal-close', name: 'delete-product-modal');
+        $this->showDeleteModal = false;
         $this->deletingId = null;
     }
 };
@@ -117,100 +125,93 @@ new class extends Component
 
 <div>
     <div class="flex flex-col gap-6">
-        <div class="flex flex-col items-start gap-4">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-                <h1 class="text-2xl font-bold text-zinc-900 dark:text-white">Product Management</h1>
-                <p class="text-zinc-500 dark:text-zinc-400">Kelola daftar produk yang tersedia di toko Anda.</p>
+                <h1 class="text-2xl font-bold text-base-content">Product Management</h1>
+                <p class="text-sm text-base-content/70">Kelola daftar produk yang tersedia di toko Anda.</p>
             </div>
-            <flux:button wire:click="resetFields" x-on:click="$dispatch('modal-show', { name: 'product-modal' })" variant="primary" icon="plus">Tambah Produk</flux:button>
+            <x-button label="Tambah Produk" icon="o-plus" wire:click="openCreateModal" class="btn-primary" />
         </div>
 
-        <flux:card>
+        <x-card class="p-0 bg-base-100 shadow-sm border border-base-200 overflow-hidden">
             <div class="overflow-x-auto">
-            <flux:table>
-                <flux:table.columns>
-                    <flux:table.column>SKU</flux:table.column>
-                    <flux:table.column>Name</flux:table.column>
-                    <flux:table.column>Cost Price</flux:table.column>
-                    <flux:table.column>Selling Price</flux:table.column>
-                    <flux:table.column>Stok Awal</flux:table.column>
-                    <flux:table.column>Alert Limit</flux:table.column>
-                    <flux:table.column>Actions</flux:table.column>
-                </flux:table.columns>
-
-                <flux:table.rows>
-                    @foreach ($this->products as $product)
-                        @php
-                            $initial = $product->stock - ($product->total_added ?? 0) + ($product->total_sold ?? 0);
-                        @endphp
-                        <flux:table.row>
-                            <flux:table.cell>{{ $product->sku }}</flux:table.cell>
-                            <flux:table.cell>{{ $product->name }}</flux:table.cell>
-                            <flux:table.cell>{{ number_format($product->cost_price, 2) }}</flux:table.cell>
-                            <flux:table.cell>{{ number_format($product->selling_price, 2) }}</flux:table.cell>
-                            <flux:table.cell>
-                                {{ $initial }}
-                            </flux:table.cell>
-                            <flux:table.cell>{{ $product->min_stock_alert }}</flux:table.cell>
-                            <flux:table.cell>
-                                <div class="flex items-center gap-2">
-                                    <flux:button wire:click="editProduct({{ $product->id }})" size="sm" variant="subtle" icon="pencil-square" class="!text-blue-600 hover:!bg-blue-100" />
-                                    <flux:button wire:click="confirmDelete({{ $product->id }})" size="sm" variant="subtle" icon="trash" class="!text-red-600 hover:!bg-red-100" />
-                                </div>
-                            </flux:table.cell>
-                        </flux:table.row>
-                    @endforeach
-                </flux:table.rows>
-            </flux:table>
-        </div>
-        <div class="mt-4">
-            {{ $this->products->links() }}
-        </div>
-    </flux:card>
+                <table class="table w-full">
+                    <thead>
+                        <tr>
+                            <th>SKU</th>
+                            <th>Name</th>
+                            <th>Cost Price</th>
+                            <th>Selling Price</th>
+                            <th>Stok Awal</th>
+                            <th>Alert Limit</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($this->products as $product)
+                            @php
+                                $initial = $product->stock - ($product->total_added ?? 0) + ($product->total_sold ?? 0);
+                            @endphp
+                            <tr>
+                                <td class="font-mono text-xs text-base-content/60">{{ $product->sku }}</td>
+                                <td class="font-medium text-base-content">{{ $product->name }}</td>
+                                <td>Rp {{ number_format($product->cost_price, 0, ',', '.') }}</td>
+                                <td>Rp {{ number_format($product->selling_price, 0, ',', '.') }}</td>
+                                <td>{{ $initial }}</td>
+                                <td>{{ $product->min_stock_alert }}</td>
+                                <td>
+                                    <div class="flex items-center gap-2">
+                                        <x-button wire:click="editProduct({{ $product->id }})" icon="o-pencil-square" class="btn-ghost btn-sm text-info" />
+                                        <x-button wire:click="confirmDelete({{ $product->id }})" icon="o-trash" class="btn-ghost btn-sm text-error" />
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="7" class="py-4 text-center text-base-content/60">Belum ada produk terdaftar.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+            @if($this->products->hasPages())
+                <div class="p-4 border-t border-base-200">
+                    {{ $this->products->links() }}
+                </div>
+            @endif
+        </x-card>
     </div>
 
-    <flux:modal name="product-modal" class="md:w-96">
-        <form wire:submit.prevent="saveProduct" class="flex flex-col gap-4">
-            <flux:heading class="text-lg">{{ $editingId ? 'Edit Product' : 'Create Product' }}</flux:heading>
-            
-            <flux:input wire:model="sku" label="SKU" placeholder="SKU-123" required />
-            <flux:input wire:model="name" label="Product Name" placeholder="Item Name" required />
+    <!-- Create/Edit Product Modal -->
+    <x-modal wire:model="showProductModal" title="{{ $editingId ? 'Edit Product' : 'Create Product' }}">
+        <x-form wire:submit="saveProduct">
+            <x-input wire:model="sku" label="SKU" placeholder="SKU-123" required />
+            <x-input wire:model="name" label="Product Name" placeholder="Item Name" required />
             <div class="grid grid-cols-2 gap-4">
-                <flux:input wire:model="cost_price" type="number" step="0.01" label="Cost Price" required />
-                <flux:input wire:model="selling_price" type="number" step="0.01" label="Selling Price" required />
+                <x-input wire:model="cost_price" type="number" step="0.01" label="Cost Price" required />
+                <x-input wire:model="selling_price" type="number" step="0.01" label="Selling Price" required />
             </div>
             <div class="grid grid-cols-2 gap-4">
-                <flux:input wire:model="stock" type="number" label="Stock" required />
-                <flux:input wire:model="min_stock_alert" type="number" label="Min Alert" required />
+                <x-input wire:model="stock" type="number" label="Stock" required />
+                <x-input wire:model="min_stock_alert" type="number" label="Min Alert" required />
             </div>
             
-            <div class="flex justify-end gap-2 mt-4">
-                <flux:modal.close>
-                    <flux:button variant="outline">Cancel</flux:button>
-                </flux:modal.close>
-                <flux:button type="submit" variant="primary">Save</flux:button>
-            </div>
-        </form>
-    </flux:modal>
+            <x-slot:actions>
+                <x-button label="Cancel" wire:click="$set('showProductModal', false)" class="btn-ghost" />
+                <x-button label="Save" type="submit" class="btn-primary" spinner="saveProduct" />
+            </x-slot:actions>
+        </x-form>
+    </x-modal>
 
     <!-- Delete Confirmation Modal -->
-    <flux:modal name="delete-product-modal" class="md:w-[400px]">
-        <div class="flex flex-col gap-4">
-            <div class="flex items-center gap-3 text-red-600">
-                <flux:icon.exclamation-triangle class="w-8 h-8" />
-                <flux:heading class="text-lg text-red-600">Hapus Produk?</flux:heading>
-            </div>
-            
-            <p class="text-sm text-zinc-600 dark:text-zinc-400">
-                Apakah Anda yakin ingin menghapus produk ini? Semua riwayat stok yang berkaitan dengan produk ini mungkin juga akan terhapus. Aksi ini tidak dapat dibatalkan.
-            </p>
-            
-            <div class="flex justify-end gap-2 mt-4">
-                <flux:modal.close>
-                    <flux:button variant="outline">Batal</flux:button>
-                </flux:modal.close>
-                <flux:button wire:click="deleteProduct" variant="danger">Ya, Hapus</flux:button>
-            </div>
-        </div>
-    </flux:modal>
+    <x-modal wire:model="showDeleteModal" title="Hapus Produk?">
+        <p class="py-2 text-base-content/70">
+            Apakah Anda yakin ingin menghapus produk ini? Semua riwayat stok yang berkaitan dengan produk ini mungkin juga akan terhapus. Aksi ini tidak dapat dibatalkan.
+        </p>
+        
+        <x-slot:actions>
+            <x-button label="Batal" wire:click="$set('showDeleteModal', false)" class="btn-ghost" />
+            <x-button label="Ya, Hapus" wire:click="deleteProduct" class="btn-error text-white" spinner="deleteProduct" />
+        </x-slot:actions>
+    </x-modal>
 </div>

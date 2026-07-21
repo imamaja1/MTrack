@@ -3,10 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Support\Str;
+use Laravel\Socialite\Facades\Socialite;
 
 class SocialAuthController extends Controller
 {
@@ -25,17 +24,17 @@ class SocialAuthController extends Controller
     {
         try {
             $googleUser = Socialite::driver('google')->user();
-            
+
             // Cek apakah user dengan google_id tersebut sudah ada
             $user = User::where('google_id', $googleUser->getId())->first();
-            
+
             if ($user) {
                 // Jika sudah ada, langsung login
                 Auth::login($user);
             } else {
                 // Jika belum, cek apakah email sudah terdaftar sebelumnya (lewat registrasi manual)
                 $existingUser = User::where('email', $googleUser->getEmail())->first();
-                
+
                 if ($existingUser) {
                     // Update user tersebut dengan google_id
                     $existingUser->update([
@@ -55,13 +54,13 @@ class SocialAuthController extends Controller
                         'is_active' => true,
                         'email_verified_at' => now(),
                     ]);
-                    
+
                     Auth::login($newUser);
                 }
             }
-            
+
             return redirect()->route('dashboard');
-            
+
         } catch (\Exception $e) {
             return redirect()->route('login')->with('status', 'Gagal login menggunakan Google. Silakan coba lagi.');
         }

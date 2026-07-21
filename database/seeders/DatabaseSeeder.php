@@ -2,11 +2,10 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use App\Models\Product;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 class DatabaseSeeder extends Seeder
 {
@@ -60,7 +59,7 @@ class DatabaseSeeder extends Seeder
         foreach ($products as $index => $item) {
             Product::create([
                 'admin_id' => $admin->id,
-                'sku' => 'SKU-' . str_pad($index + 1, 4, '0', STR_PAD_LEFT),
+                'sku' => 'SKU-'.str_pad($index + 1, 4, '0', STR_PAD_LEFT),
                 'name' => $item['name'],
                 'cost_price' => $item['cost'],
                 'selling_price' => $item['sell'],

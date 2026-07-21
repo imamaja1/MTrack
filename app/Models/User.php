@@ -79,7 +79,7 @@ class User extends Authenticatable implements PasskeyUser
     {
         return $this->hasMany(Coupon::class, 'admin_id');
     }
-    
+
     public function memberBenefits(): HasMany
     {
         return $this->hasMany(MemberBenefit::class, 'admin_id');
