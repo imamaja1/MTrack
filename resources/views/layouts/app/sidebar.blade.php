@@ -7,13 +7,44 @@
         {{-- Toast Notifications --}}
         <x-toast />
 
+        {{-- NAVBAR / TOP HEADER (Mobile & Desktop Quick Actions) --}}
+        <div class="navbar lg:hidden bg-base-100 border-b border-base-300 px-4 flex items-center justify-between sticky top-0 z-10">
+            <div class="flex items-center gap-2">
+                <label for="main-drawer" class="btn btn-ghost btn-square drawer-button lg:hidden">
+                    <x-icon name="o-bars-3" class="w-6 h-6" />
+                </label>
+                <div class="font-bold text-lg">
+                    {{ config('app.name', 'MTrack') }}
+                </div>
+            </div>
+            
+            <x-dropdown right>
+                <x-slot:trigger>
+                    <div class="flex aspect-square size-8 items-center justify-center rounded-full bg-primary text-primary-content font-bold shrink-0 cursor-pointer">
+                        {{ auth()->user()->initials() }}
+                    </div>
+                </x-slot:trigger>
+                <x-menu-item title="{{ auth()->user()->name }}" subtitle="{{ auth()->user()->email }}" class="font-bold border-b border-base-200 pointer-events-none" />
+                <x-menu-item title="Settings" icon="o-cog-6-tooth" link="{{ route('profile.edit') }}" wire:navigate />
+                <form method="POST" action="{{ route('logout') }}" class="w-full">
+                    @csrf
+                    <x-menu-item title="Log out" icon="o-arrow-right-on-rectangle" type="submit" class="text-error" />
+                </form>
+            </x-dropdown>
+        </div>
+
         {{-- Main Layout Shell --}}
         <x-main full-width>
             {{-- SIDEBAR --}}
-            <x-slot:sidebar drawer="main-drawer" collapsible class="bg-base-200/60 border-r border-base-300">
+            <x-slot:sidebar drawer="main-drawer" collapse-text="Tutup" class="bg-base-200 border-r border-base-300">
                 {{-- BRAND / LOGO --}}
                 <div class="p-4 flex items-center justify-between">
                     <x-app-logo :sidebar="true" href="{{ route('dashboard') }}" wire:navigate />
+                    
+                    {{-- Mobile & Tab Drawer Close Button (Visible only on small screens) --}}
+                    <label for="main-drawer" class="btn btn-ghost btn-circle btn-sm lg:hidden">
+                        <x-icon name="o-x-mark" class="w-5 h-5" />
+                    </label>
                 </div>
 
                 {{-- MENU --}}
@@ -58,26 +89,7 @@
                 </div>
             </x-slot:sidebar>
 
-            {{-- NAVBAR / TOP HEADER (Mobile & Desktop Quick Actions) --}}
-            <x-slot:navbar class="lg:hidden bg-base-100 border-b border-base-300 px-4 py-2 flex items-center justify-between">
-                <label for="main-drawer" class="btn btn-ghost btn-square drawer-button lg:hidden">
-                    <x-icon name="o-bars-3" class="w-6 h-6" />
-                </label>
-                <div class="font-bold text-lg">
-                    {{ config('app.name', 'MTrack') }}
-                </div>
-                <x-dropdown>
-                    <x-slot:trigger>
-                        <x-avatar :title="auth()->user()->initials()" class="!w-8 !h-8 bg-primary text-primary-content font-bold rounded-full" />
-                    </x-slot:trigger>
-                    <x-menu-item title="{{ auth()->user()->name }}" subtitle="{{ auth()->user()->email }}" class="font-bold border-b border-base-200 pointer-events-none" />
-                    <x-menu-item title="Settings" icon="o-cog-6-tooth" link="{{ route('profile.edit') }}" wire:navigate />
-                    <form method="POST" action="{{ route('logout') }}" class="w-full">
-                        @csrf
-                        <x-menu-item title="Log out" icon="o-arrow-right-on-rectangle" type="submit" class="text-error" />
-                    </form>
-                </x-dropdown>
-            </x-slot:navbar>
+
 
             {{-- MAIN CONTENT AREA --}}
             <x-slot:content class="p-6 md:p-8">
