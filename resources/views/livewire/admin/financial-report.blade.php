@@ -30,8 +30,10 @@ new class extends Component
             ->get();
             
         $totalRevenue = $transactions->sum('total_amount');
+        $totalTax = $transactions->sum('tax_amount');
+        $netRevenue = $totalRevenue - $totalTax;
         $totalCogs = $transactions->sum('total_cost');
-        $grossProfit = $totalRevenue - $totalCogs;
+        $grossProfit = $netRevenue - $totalCogs;
 
         // 2. Total Pengeluaran
         $expenses = Expense::where('admin_id', $adminId)
@@ -46,6 +48,8 @@ new class extends Component
         return [
             'data' => [
                 'totalRevenue' => $totalRevenue,
+                'totalTax' => $totalTax,
+                'netRevenue' => $netRevenue,
                 'totalCogs' => $totalCogs,
                 'grossProfit' => $grossProfit,
                 'totalExpense' => $totalExpense,
@@ -85,12 +89,20 @@ new class extends Component
         </div>
 
         <!-- Rekap Cards -->
-        <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-5">
             <x-card class="bg-base-100 shadow-sm border border-base-200">
                 <div class="flex flex-col gap-1">
-                    <div class="text-sm font-medium text-base-content/70">Total Omset (Pendapatan)</div>
+                    <div class="text-sm font-medium text-base-content/70">Total Omset (Bruto)</div>
                     <div class="text-2xl font-bold text-base-content">Rp {{ number_format($data['totalRevenue'], 0, ',', '.') }}</div>
                     <div class="text-xs text-base-content/50 mt-1">Dari {{ $data['transactionsCount'] }} transaksi</div>
+                </div>
+            </x-card>
+            
+            <x-card class="bg-base-100 shadow-sm border border-base-200">
+                <div class="flex flex-col gap-1">
+                    <div class="text-sm font-medium text-base-content/70">Pajak (PPN) Terkumpul</div>
+                    <div class="text-2xl font-bold text-info">Rp {{ number_format($data['totalTax'], 0, ',', '.') }}</div>
+                    <div class="text-xs text-base-content/50 mt-1">Titipan pajak transaksi</div>
                 </div>
             </x-card>
             
@@ -128,9 +140,19 @@ new class extends Component
                 
                 <div class="space-y-3 text-sm">
                     <div class="flex justify-between pb-2 border-b border-base-200">
-                        <span class="text-base-content/70">Total Omset</span>
+                        <span class="text-base-content/70">Total Omset (Bruto)</span>
                         <span class="font-medium text-base-content">Rp {{ number_format($data['totalRevenue'], 0, ',', '.') }}</span>
                     </div>
+                    @if($data['totalTax'] > 0)
+                    <div class="flex justify-between pb-2 border-b border-base-200">
+                        <span class="text-base-content/70">Pajak (PPN) Terkumpul</span>
+                        <span class="font-medium text-info">- Rp {{ number_format($data['totalTax'], 0, ',', '.') }}</span>
+                    </div>
+                    <div class="flex justify-between pb-2 border-b border-base-200 font-semibold">
+                        <span class="text-base-content">Omset Bersih (Netto)</span>
+                        <span class="text-base-content">Rp {{ number_format($data['netRevenue'], 0, ',', '.') }}</span>
+                    </div>
+                    @endif
                     <div class="flex justify-between pb-2 border-b border-base-200">
                         <span class="text-base-content/70">Total HPP</span>
                         <span class="font-medium text-warning">- Rp {{ number_format($data['totalCogs'], 0, ',', '.') }}</span>

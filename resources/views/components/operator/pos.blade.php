@@ -7,6 +7,7 @@ use App\Models\TransactionItem;
 use App\Models\StockMovement;
 use App\Models\Member;
 use App\Models\Coupon;
+use App\Models\TaxConfig;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Mary\Traits\Toast;
@@ -171,9 +172,29 @@ new class extends Component
         return $discount > $subtotal ? $subtotal : $discount;
     }
     
+    public function getActiveTaxesProperty()
+    {
+        $adminId = auth()->user()->role === 'admin' ? auth()->id() : auth()->user()->admin_id;
+        return TaxConfig::where('admin_id', $adminId)->where('is_active', true)->get();
+    }
+
+    public function getTaxAmountProperty()
+    {
+        $taxTotal = 0;
+        $dpp = max(0, $this->subtotal - $this->discount);
+        foreach ($this->active_taxes as $tax) {
+            if ($tax->type === 'percentage') {
+                $taxTotal += $dpp * ($tax->value / 100);
+            } else {
+                $taxTotal += $tax->value;
+            }
+        }
+        return $taxTotal;
+    }
+    
     public function getTotalProperty()
     {
-        return $this->subtotal - $this->discount;
+        return max(0, $this->subtotal - $this->discount + $this->tax_amount);
     }
     
     public function getCashbackInfoProperty()
@@ -236,6 +257,7 @@ new class extends Component
     {
         // This is implicitly called after cart changes to ensure discount stays valid
         $this->discount; 
+        $this->tax_amount;
     }
 
     public function checkout()
@@ -263,6 +285,7 @@ new class extends Component
                         'customer_name' => $this->customer_name ?: null,
                         'coupon_id' => $this->applied_coupon ? $this->applied_coupon['id'] : null,
                         'discount_amount' => 0,
+                        'tax_amount' => 0,
                         'total_cost' => 0,
                         'total_amount' => 0,
                         'profit' => 0,
@@ -323,12 +346,13 @@ new class extends Component
                     ]);
                 }
                 
-                $finalNewAmount = $newAmount - $this->discount;
+                $finalNewAmount = $newAmount - $this->discount + $this->tax_amount;
 
                 $transaction->total_cost = $newCost;
                 $transaction->total_amount = $finalNewAmount;
-                $transaction->profit = $finalNewAmount - $newCost;
+                $transaction->profit = ($finalNewAmount - $this->tax_amount) - $newCost;
                 $transaction->discount_amount = $this->discount;
+                $transaction->tax_amount = $this->tax_amount;
                 $transaction->member_id = $this->member_id ?: null;
                 $transaction->customer_name = $this->customer_name ?: null;
                 $transaction->coupon_id = $this->applied_coupon ? $this->applied_coupon['id'] : null;
@@ -482,6 +506,13 @@ new class extends Component
                             </div>
                         @endif
                         
+                        @if($this->tax_amount > 0)
+                            <div class="flex justify-between items-center text-sm text-warning font-medium">
+                                <span>PPN / Pajak</span>
+                                <span>+ Rp {{ number_format($this->tax_amount, 0, ',', '.') }}</span>
+                            </div>
+                        @endif
+                        
                         <div class="border-t border-base-200 pt-2 flex justify-between items-center text-base font-bold text-base-content">
                             <span>Total Bayar</span>
                             <span class="text-primary text-xl">Rp {{ number_format($this->total, 0, ',', '.') }}</span>
@@ -556,7 +587,13 @@ new class extends Component
     </div>
 
     <!-- Totals summary for modal -->
-    <div class="bg-base-200/50 p-3 rounded-lg border border-base-200 mt-4">
+    <div class="bg-base-200/50 p-3 rounded-lg border border-base-200 mt-4 space-y-1">
+        @if($this->tax_amount > 0)
+            <div class="flex justify-between items-center text-sm text-warning font-medium">
+                <span>PPN / Pajak</span>
+                <span>+ Rp {{ number_format($this->tax_amount, 0, ',', '.') }}</span>
+            </div>
+        @endif
         <div class="flex justify-between items-center font-bold">
             <span>Total Akhir</span>
             <span class="text-primary">Rp {{ number_format($this->total, 0, ',', '.') }}</span>

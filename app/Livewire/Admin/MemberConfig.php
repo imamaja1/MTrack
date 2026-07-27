@@ -4,10 +4,14 @@ namespace App\Livewire\Admin;
 
 use App\Models\MemberBenefit;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Layout;
+use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Mary\Traits\Toast;
 
+#[Layout('components.layouts.app')]
+#[Title('Config Member')]
 class MemberConfig extends Component
 {
     use Toast, WithPagination;

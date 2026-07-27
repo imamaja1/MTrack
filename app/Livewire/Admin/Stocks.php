@@ -4,9 +4,13 @@ namespace App\Livewire\Admin;
 
 use App\Models\Product;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Layout;
+use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
 
+#[Layout('components.layouts.app')]
+#[Title('Laporan Stok Produk')]
 class Stocks extends Component
 {
     use WithPagination;

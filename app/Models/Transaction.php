@@ -15,6 +15,7 @@ class Transaction extends Model
         'member_id',
         'coupon_id',
         'discount_amount',
+        'tax_amount',
         'total_cost',
         'total_amount',
         'profit',
@@ -28,6 +29,7 @@ class Transaction extends Model
         'total_amount' => 'decimal:2',
         'profit' => 'decimal:2',
         'discount_amount' => 'decimal:2',
+        'tax_amount' => 'decimal:2',
         'paid_amount' => 'decimal:2',
     ];
 

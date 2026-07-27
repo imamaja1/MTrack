@@ -5,9 +5,13 @@ namespace App\Livewire\Admin;
 use App\Models\Product;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Layout;
+use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
 
+#[Layout('components.layouts.app')]
+#[Title('Product Management')]
 class ProductManagement extends Component
 {
     use WithPagination;

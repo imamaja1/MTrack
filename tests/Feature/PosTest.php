@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Product;
+use App\Models\TaxConfig;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -89,5 +90,44 @@ class PosTest extends TestCase
             ->assertHasErrors('cart');
 
         $this->assertEquals(1, $product->fresh()->stock);
+    }
+
+    public function test_can_checkout_with_active_tax()
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'is_active' => true]);
+
+        TaxConfig::create([
+            'admin_id' => $admin->id,
+            'name' => 'PPN 11%',
+            'type' => 'percentage',
+            'value' => 11,
+            'is_active' => true,
+        ]);
+
+        $product = Product::create([
+            'admin_id' => $admin->id,
+            'sku' => 'TEST-TAX',
+            'name' => 'Product With Tax',
+            'cost_price' => 10000,
+            'selling_price' => 100000,
+            'stock' => 10,
+            'min_stock_alert' => 2,
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test('operator.pos')
+            ->call('addToCart', $product->id)
+            ->assertSet('tax_amount', 11000)
+            ->assertSet('total', 111000)
+            ->call('checkout')
+            ->assertHasNoErrors('cart');
+
+        $this->assertDatabaseHas('transactions', [
+            'admin_id' => $admin->id,
+            'total_cost' => 10000,
+            'tax_amount' => 11000,
+            'total_amount' => 111000,
+            'profit' => 90000,
+        ]);
     }
 }

@@ -157,68 +157,91 @@ new class extends Component
 
         <x-card class="p-0 bg-base-100 shadow-sm border border-base-200 overflow-hidden">
             <div class="overflow-x-auto">
-                <table class="table w-full">
+                <table class="table table-hover w-full text-left">
                     <thead>
-                        <tr>
-                            <th>Tanggal / Waktu</th>
-                            <th>Invoice</th>
-                            <th>Member / Kupon</th>
-                            <th>Total Tagihan</th>
-                            <th>Sudah Dibayar</th>
-                            <th>Sisa Tagihan</th>
-                            <th>Status</th>
-                            <th>Aksi</th>
+                        <tr class="bg-base-200/60 text-base-content/70 uppercase text-[11px] tracking-wider font-bold border-b border-base-300">
+                            <th class="whitespace-nowrap py-3.5 pl-4">Tanggal / Waktu</th>
+                            <th class="whitespace-nowrap py-3.5">Invoice</th>
+                            <th class="whitespace-nowrap py-3.5">Pelanggan / Promo</th>
+                            <th class="whitespace-nowrap py-3.5 text-right">Total Tagihan</th>
+                            <th class="whitespace-nowrap py-3.5 text-right">Sudah Dibayar</th>
+                            <th class="whitespace-nowrap py-3.5 text-right">Sisa Tagihan</th>
+                            <th class="whitespace-nowrap py-3.5 text-center">Status</th>
+                            <th class="whitespace-nowrap py-3.5 text-center pr-4">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse ($this->transactions as $trx)
-                            <tr>
-                                <td class="text-xs">{{ $trx->created_at->format('d M Y, H:i') }}</td>
-                                <td class="font-mono text-xs font-bold">{{ $trx->invoice_number }}</td>
-                                <td class="text-xs">
-                                    @if($trx->customer_name)
-                                        <div class="font-semibold text-base-content"><x-icon name="o-user" class="w-3 h-3 inline mr-1" />{{ $trx->customer_name }}</div>
-                                    @endif
-                                    
-                                    @if($trx->member)
-                                        <div class="font-semibold text-info"><x-icon name="o-star" class="w-3 h-3 inline mr-1" />{{ $trx->member->name }}</div>
-                                    @elseif(!$trx->customer_name)
-                                        <div class="text-base-content/40">-</div>
-                                    @endif
-                                    
-                                    @if($trx->coupon)
-                                        <div class="text-success mt-1"><x-icon name="o-ticket" class="w-3 h-3 inline mr-1" />{{ $trx->coupon->code }}</div>
-                                    @endif
+                            <tr class="hover:bg-base-200/40 transition-colors duration-150 border-b border-base-200/80">
+                                <td class="whitespace-nowrap text-xs font-medium text-base-content/80 py-4 pl-4">{{ $trx->created_at->format('d M Y, H:i') }}</td>
+                                <td class="whitespace-nowrap font-mono text-xs font-bold text-primary py-4">{{ $trx->invoice_number }}</td>
+                                <td class="text-xs py-4 min-w-[160px]">
+                                    <div class="flex flex-col gap-1.5">
+                                        @if($trx->customer_name)
+                                            <div class="font-semibold text-base-content flex items-center gap-1.5">
+                                                <x-icon name="o-user" class="w-3.5 h-3.5 text-base-content/60 shrink-0" />
+                                                <span class="truncate max-w-[150px]">{{ $trx->customer_name }}</span>
+                                            </div>
+                                        @endif
+                                        
+                                        @if($trx->member)
+                                            <div class="font-semibold text-info flex items-center gap-1.5">
+                                                <x-icon name="o-star" class="w-3.5 h-3.5 shrink-0" />
+                                                <span class="truncate max-w-[150px]">{{ $trx->member->name }}</span>
+                                            </div>
+                                        @elseif(!$trx->customer_name)
+                                            <span class="text-base-content/40 italic">- Umum -</span>
+                                        @endif
+                                        
+                                        @if($trx->coupon)
+                                            <div class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success border border-success/20 w-fit">
+                                                <x-icon name="o-ticket" class="w-3 h-3" />
+                                                <span>{{ $trx->coupon->code }}</span>
+                                            </div>
+                                        @endif
+                                    </div>
                                 </td>
-                                <td class="font-semibold">Rp {{ number_format($trx->total_amount, 0, ',', '.') }}</td>
-                                <td class="text-success">Rp {{ number_format($trx->paid_amount, 0, ',', '.') }}</td>
-                                <td class="text-error font-bold">Rp {{ number_format($trx->remaining_amount, 0, ',', '.') }}</td>
-                                <td>
-                                    @if($trx->status === 'completed')
-                                        <x-badge value="Lunas" class="badge-success badge-sm" />
+                                <td class="whitespace-nowrap text-right font-bold text-base-content py-4">Rp {{ number_format($trx->total_amount, 0, ',', '.') }}</td>
+                                <td class="whitespace-nowrap text-right font-semibold text-success py-4">Rp {{ number_format($trx->paid_amount, 0, ',', '.') }}</td>
+                                <td class="whitespace-nowrap text-right py-4">
+                                    @if($trx->remaining_amount > 0)
+                                        <span class="font-bold text-error bg-error/10 px-2 py-1 rounded-md inline-block">Rp {{ number_format($trx->remaining_amount, 0, ',', '.') }}</span>
                                     @else
-                                        <x-badge value="Belum Lunas" class="badge-warning badge-sm" />
+                                        <span class="text-base-content/40 font-medium">Rp 0</span>
                                     @endif
                                 </td>
-                                <td>
-                                    <div class="flex items-center gap-2">
+                                <td class="whitespace-nowrap text-center py-4">
+                                    @if($trx->status === 'completed')
+                                        <span class="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-success/15 text-success border border-success/30 shadow-2xs">
+                                            <x-icon name="o-check-circle" class="w-3.5 h-3.5" />
+                                            <span>Lunas</span>
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-warning/15 text-warning border border-warning/30 shadow-2xs animate-pulse">
+                                            <x-icon name="o-clock" class="w-3.5 h-3.5" />
+                                            <span>Belum Lunas</span>
+                                        </span>
+                                    @endif
+                                </td>
+                                <td class="whitespace-nowrap text-center py-4 pr-4">
+                                    <div class="flex items-center justify-center gap-1.5">
                                         @if($trx->status !== 'completed')
-                                            <x-button wire:click="openPaymentModal({{ $trx->id }})" icon="o-banknotes" class="btn-ghost btn-sm text-success" title="Bayar / Pelunasan" />
-                                            <x-button wire:click="addMenu({{ $trx->id }})" icon="o-shopping-bag" class="btn-ghost btn-sm text-info" title="Tambah Menu" />
+                                            <x-button wire:click="openPaymentModal({{ $trx->id }})" icon="o-banknotes" class="btn-sm btn-success text-white shadow-xs" tooltip="Pelunasan Tagihan" />
+                                            <x-button wire:click="addMenu({{ $trx->id }})" icon="o-plus-circle" class="btn-sm btn-info text-white shadow-xs" tooltip="Tambah Menu" />
                                             @if($trx->paid_amount == 0)
-                                                <x-button wire:click="confirmDeleteTransaction({{ $trx->id }})" icon="o-trash" class="btn-ghost btn-sm text-error" title="Hapus Tagihan" />
+                                                <x-button wire:click="confirmDeleteTransaction({{ $trx->id }})" icon="o-trash" class="btn-sm btn-ghost text-error hover:bg-error/10" tooltip="Hapus Tagihan" />
                                             @endif
                                         @endif
                                         @if($trx->paid_amount > 0)
-                                            <x-button wire:click="printReceipt({{ $trx->id }})" icon="o-printer" class="btn-ghost btn-sm text-base-content/70" title="Print Struk" />
+                                            <x-button wire:click="printReceipt({{ $trx->id }})" icon="o-printer" class="btn-sm btn-ghost text-base-content hover:bg-base-200" tooltip="Cetak Struk" />
                                         @endif
                                     </div>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="text-center text-base-content/60 py-4">
-                                    Belum ada transaksi.
+                                <td colspan="8" class="text-center text-base-content/60 py-8 font-medium">
+                                    Belum ada riwayat transaksi.
                                 </td>
                             </tr>
                         @endforelse
@@ -256,7 +279,7 @@ new class extends Component
                 <div class="flex flex-col gap-1 text-sm border-b border-base-200 pb-3 mb-2">
                     <div class="flex justify-between">
                         <span class="text-base-content/60">Subtotal</span>
-                        <span class="font-semibold text-base-content">Rp {{ number_format(($selectedTransaction['total_amount'] ?? 0) + ($selectedTransaction['discount_amount'] ?? 0), 0, ',', '.') }}</span>
+                        <span class="font-semibold text-base-content">Rp {{ number_format(($selectedTransaction['total_amount'] ?? 0) + ($selectedTransaction['discount_amount'] ?? 0) - ($selectedTransaction['tax_amount'] ?? 0), 0, ',', '.') }}</span>
                     </div>
                     
                     @if(isset($selectedTransaction['discount_amount']) && $selectedTransaction['discount_amount'] > 0)
@@ -271,6 +294,13 @@ new class extends Component
                                 @endif
                             </span>
                             <span class="font-semibold">- Rp {{ number_format($selectedTransaction['discount_amount'], 0, ',', '.') }}</span>
+                        </div>
+                    @endif
+
+                    @if(isset($selectedTransaction['tax_amount']) && $selectedTransaction['tax_amount'] > 0)
+                        <div class="flex justify-between text-warning">
+                            <span>PPN / Pajak</span>
+                            <span class="font-semibold">+ Rp {{ number_format($selectedTransaction['tax_amount'], 0, ',', '.') }}</span>
                         </div>
                     @endif
 
@@ -326,7 +356,7 @@ new class extends Component
     <!-- Hidden Print Area -->
     @if($receiptData)
         <div id="print-area" class="hidden">
-            @include('operator.receipt', ['receipt' => $receiptData])
+            @include('components.operator.receipt', ['receipt' => $receiptData])
         </div>
     @endif
 </div>

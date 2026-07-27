@@ -4,10 +4,14 @@ namespace App\Livewire\Admin;
 
 use App\Models\Coupon;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Layout;
+use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Mary\Traits\Toast;
 
+#[Layout('components.layouts.app')]
+#[Title('Manajemen Kupon')]
 class Coupons extends Component
 {
     use Toast, WithPagination;
